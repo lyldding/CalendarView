@@ -1,4 +1,4 @@
-package com.lyldding.calendarview;
+package com.lyldding.calendarlibrary;
 
 import android.graphics.RectF;
 
@@ -6,7 +6,7 @@ import java.io.Serializable;
 
 /**
  * @author https://github.com/lyldding/CalendarView
- * @date 2019/2/1
+ * @date 2019/1/1
  */
 public class DayBean implements Serializable {
     private RectF mRectF;

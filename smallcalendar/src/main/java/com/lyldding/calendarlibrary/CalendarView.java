@@ -1,4 +1,4 @@
-package com.lyldding.calendarview;
+package com.lyldding.calendarlibrary;
 
 import android.content.Context;
 import android.graphics.Canvas;
@@ -22,19 +22,20 @@ import java.util.List;
 
 /**
  * @author https://github.com/lyldding/CalendarView
- * @date 2019/2/1
+ * @date 2019/1/1
  */
 public class CalendarView extends View {
     private static final String TAG = "CalendarView";
     private int mTitleTextSize;
     private int mWeekTextSize;
     private int mDayTextSize;
-    private int mTextColor = 0xff267782;
-    private int mOtherMonthTextColor = 0xff77adbc;
+    private int mTextColor = Color.BLACK;
+    private int mOtherMonthTextColor = Color.LTGRAY;
     private int mWeekBackgroundColor = 0xff88baff;
-    private int mBackground = 0xff33d7ff;
+    private int mBackground = Color.WHITE;
     private int mSelectBackgroundColor = 0xff1157cb;
     private int mSelectTextColor = Color.RED;
+    private int mBorderColor = Color.GRAY;
     private int mRadius;
     private int mStrokeWidth;
     private float mItemWidth;
@@ -364,7 +365,7 @@ public class CalendarView extends View {
             canvas.drawRect(rectF, mPaint);
             if (mIsShowBorder) {
                 mPaint.setStyle(Paint.Style.STROKE);
-                mPaint.setColor(Color.WHITE);
+                mPaint.setColor(mBorderColor);
                 canvas.drawRect(rectF, mPaint);
             }
             mTextPaint.setTextSize(mWeekTextSize);
@@ -395,7 +396,7 @@ public class CalendarView extends View {
     private void drawDay(Canvas canvas, DayBean dayBean) {
         if (mIsShowBorder) {
             mPaint.setStyle(Paint.Style.STROKE);
-            mPaint.setColor(Color.WHITE);
+            mPaint.setColor(mBorderColor);
             canvas.drawRect(dayBean.getRectF(), mPaint);
         }
         if (dayBean.isEmpty()) {
@@ -409,13 +410,8 @@ public class CalendarView extends View {
             mTextPaint.setColor(mSelectTextColor);
             mPaint.setStyle(Paint.Style.FILL);
             mPaint.setColor(mSelectBackgroundColor);
-            String day = dayBean.getDay() + "";
-            float textWidth = mTextPaint.measureText(day);
-            mTextPaint.getTextBounds(day, 0, 1, mDayTextRect);
-            float radiusMin = (float) (Math.sqrt(textWidth * textWidth + mDayTextRect.height() * mDayTextRect.height()) / 2f);
-            float radiusMax = Math.min(mItemWidth, mDayItemHeight) / 2f;
             canvas.drawCircle(dayBean.getRectF().centerX(), dayBean.getRectF().centerY(),
-                    radiusMin > radiusMax ? radiusMax : (radiusMin + radiusMax) / 2f, mPaint);
+                    Math.min(dayBean.getRectF().width(), dayBean.getRectF().height()) / 3f, mPaint);
         }
         canvas.drawText(String.valueOf(dayBean.getDay()), dayBean.getRectF().centerX(), getTextBaseline(dayBean.getRectF()), mTextPaint);
     }
@@ -426,7 +422,7 @@ public class CalendarView extends View {
     private void drawOuterLine(Canvas canvas) {
         if (mIsShowBorder) {
             mPaint.setStyle(Paint.Style.STROKE);
-            mPaint.setColor(mTextColor);
+            mPaint.setColor(mBorderColor);
             canvas.drawRoundRect(mViewRectF, mRadius, mRadius, mPaint);
         }
     }
@@ -666,7 +662,7 @@ public class CalendarView extends View {
         mVelocityTracker.clear();
     }
 
-    interface OnClickDayListener {
+    public interface OnClickDayListener {
         /**
          * 选择日期
          */
@@ -711,14 +707,14 @@ public class CalendarView extends View {
     /**
      * @param show true 显示当前日期
      */
-    public void setShowCurrentDate(boolean show) {
+    public void showCurrentDate(boolean show) {
         mIsShowCurrentDate = show;
     }
 
     /**
      * @param show true 显示选中日期日期
      */
-    public void setShowSelectedDate(boolean show) {
+    public void showSelectedDate(boolean show) {
         mIsShowSelectDate = show;
     }
 
@@ -734,14 +730,14 @@ public class CalendarView extends View {
     /**
      * @param isShow true 显示边框
      */
-    public void setShowBorder(boolean isShow) {
+    public void showBorder(boolean isShow) {
         mIsShowBorder = isShow;
     }
 
     /**
      * @param isScroll true 切换上下月 按钮时滑动
      */
-    public void setBtnSwitchMonthScroll(boolean isScroll) {
+    public void btnSwitchMonthScroll(boolean isScroll) {
         mIsBtnSwitchMonthScroll = isScroll;
     }
 
@@ -757,14 +753,22 @@ public class CalendarView extends View {
         mDayTextSize = dayTextSize;
     }
 
-    public void setContainOtherMonthDate(boolean isContainOtherMonthDate) {
+    public void containOtherMonthDate(boolean isContainOtherMonthDate) {
         mIsContainOtherMonthDate = isContainOtherMonthDate;
+        CalendarUtils.getInstance().clearCacheMonth();
+        updateMonth(mCurrentYear, mCurrentMonth, Type.NONE);
     }
 
     /**
      * @param isSundayAtFirst true 周日为第一天，false 周一为第一天
      */
-    public void setmIsSundayAtFirst(boolean isSundayAtFirst) {
+    public void sundayAtFirst(boolean isSundayAtFirst) {
         mIsSundayAtFirst = isSundayAtFirst;
+        CalendarUtils.getInstance().clearCacheMonth();
+        updateMonth(mCurrentYear, mCurrentMonth, Type.NONE);
+    }
+
+    public void setBorderColor(@ColorInt int borderColor) {
+        mBorderColor = borderColor;
     }
 }

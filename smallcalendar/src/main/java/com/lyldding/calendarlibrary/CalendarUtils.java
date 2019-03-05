@@ -1,4 +1,4 @@
-package com.lyldding.calendarview;
+package com.lyldding.calendarlibrary;
 
 import android.content.Context;
 import android.util.Log;
@@ -11,7 +11,7 @@ import java.util.List;
 
 /**
  * @author https://github.com/lyldding/CalendarView
- * @date 2019/2/1
+ * @date 2019/1/1
  */
 public class CalendarUtils {
     private static final String TAG = "CalendarUtils";
@@ -35,6 +35,10 @@ public class CalendarUtils {
 
     private final static class Holder {
         private final static CalendarUtils INSTANCE = new CalendarUtils();
+    }
+
+    public void clearCacheMonth(){
+        mCacheMap = new HashMap<>();
     }
 
     /**
