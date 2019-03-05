@@ -1,6 +1,7 @@
 package com.lyldding.calendarview;
 
 import android.content.Context;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -13,10 +14,12 @@ import java.util.List;
  * @date 2019/2/1
  */
 public class CalendarUtils {
+    private static final String TAG = "CalendarUtils";
     public static int DAY_ROWS = 6;
     public static int WEEK_COLUMN = 7;
     public static int DAY_CELL_NUM = DAY_ROWS * WEEK_COLUMN;
     public static List<String> WEEKS = Arrays.asList("日", "一", "二", "三", "四", "五", "六");
+    public static List<String> WEEKS_1 = Arrays.asList("一", "二", "三", "四", "五", "六", "日");
     /**
      * 缓存每月天数信息
      */
@@ -42,13 +45,13 @@ public class CalendarUtils {
      * @param isContainOtherMonth true 包含其他月份
      * @return
      */
-    public List<DayBean> getMonthDate(int year, int month, boolean isContainOtherMonth) {
+    public List<DayBean> getMonthDate(int year, int month, boolean isContainOtherMonth, boolean isSundayAtFirst) {
         String key = year + "" + month;
         if (mCacheMap.containsKey(key)) {
             return mCacheMap.get(key);
         }
         List<DayBean> dayBeans = new ArrayList<>();
-        int firstDayOfWeek = getFirstDayOfWeekByMonth(year, month - 1);
+        int firstDayOfWeek = getFirstDayOfMonthInWeek(year, month - 1, isSundayAtFirst);
 
         int[] date = getLastMonthOfYear(year, month);
         int lastYear = date[0];
@@ -175,10 +178,18 @@ public class CalendarUtils {
     /**
      * 计算当月1号是周几
      */
-    private int getFirstDayOfWeekByMonth(int year, int month) {
+    private int getFirstDayOfMonthInWeek(int year, int month, boolean isSundayAtFirst) {
         Calendar calendar = Calendar.getInstance();
         calendar.set(year, month, 1);
-        return calendar.get(Calendar.DAY_OF_WEEK) - 1;
+        Log.d(TAG, "getFirstDayOfMonthInWeek: " + calendar.get(Calendar.DAY_OF_WEEK));
+        int result = calendar.get(Calendar.DAY_OF_WEEK) - 1;
+        if (!isSundayAtFirst) {
+            if (result == 0) {
+                result = 7;
+            }
+            result -= 1;
+        }
+        return result;
     }
 
     public int dip2px(Context context, float dpValue) {

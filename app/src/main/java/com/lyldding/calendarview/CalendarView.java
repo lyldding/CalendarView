@@ -91,10 +91,11 @@ public class CalendarView extends View {
     private String mSelectDateStr;
     private boolean mIsShowSelectDate = true;
     private boolean mIsShowCurrentDate = true;
-    private boolean mIsShowBorder = true;
+    private boolean mIsShowBorder = false;
     private boolean mIsBtnSwitchMonthScroll = true;
     private boolean mIsEnableClickOtherMonthDate;
-    private boolean mIsContainOtherMonthDate = false;
+    private boolean mIsContainOtherMonthDate = true;
+    private boolean mIsSundayAtFirst = true;
 
     enum Type {
         /**
@@ -367,7 +368,8 @@ public class CalendarView extends View {
                 canvas.drawRect(rectF, mPaint);
             }
             mTextPaint.setTextSize(mWeekTextSize);
-            canvas.drawText(CalendarUtils.WEEKS.get(index), rectF.centerX(), getTextBaseline(rectF), mTextPaint);
+            canvas.drawText(mIsSundayAtFirst ? CalendarUtils.WEEKS.get(index) : CalendarUtils.WEEKS_1.get(index),
+                    rectF.centerX(), getTextBaseline(rectF), mTextPaint);
 
         }
     }
@@ -486,23 +488,28 @@ public class CalendarView extends View {
             default:
         }
         mDayBeans.clear();
-        mDayBeans.addAll(CalendarUtils.getInstance().getMonthDate(date[0], date[1], mIsContainOtherMonthDate));
+        mDayBeans.addAll(CalendarUtils.getInstance().getMonthDate(date[0], date[1],
+                mIsContainOtherMonthDate, mIsSundayAtFirst));
         mCurrentYear = date[0];
         mCurrentMonth = date[1];
         mTitleText = mCurrentYear + "年" + mCurrentMonth + "月";
 
         int[] dateNext = CalendarUtils.getInstance().getNextMonthOfYear(mCurrentYear, mCurrentMonth);
         mNextDayBeans.clear();
-        mNextDayBeans.addAll(CalendarUtils.getInstance().getMonthDate(dateNext[0], dateNext[1], mIsContainOtherMonthDate));
+        mNextDayBeans.addAll(CalendarUtils.getInstance().getMonthDate(dateNext[0], dateNext[1],
+                mIsContainOtherMonthDate, mIsSundayAtFirst));
 
         int[] dateLast = CalendarUtils.getInstance().getLastMonthOfYear(mCurrentYear, mCurrentMonth);
         mLastDayBeans.clear();
-        mLastDayBeans.addAll(CalendarUtils.getInstance().getMonthDate(dateLast[0], dateLast[1], mIsContainOtherMonthDate));
+        mLastDayBeans.addAll(CalendarUtils.getInstance().getMonthDate(dateLast[0], dateLast[1],
+                mIsContainOtherMonthDate, mIsSundayAtFirst));
 
         mNextDayCellsV.clear();
-        mNextDayCellsV.addAll(CalendarUtils.getInstance().getMonthDate(mCurrentYear + 1, mCurrentMonth, mIsContainOtherMonthDate));
+        mNextDayCellsV.addAll(CalendarUtils.getInstance().getMonthDate(mCurrentYear + 1, mCurrentMonth,
+                mIsContainOtherMonthDate, mIsSundayAtFirst));
         mLastDayCellsV.clear();
-        mLastDayCellsV.addAll(CalendarUtils.getInstance().getMonthDate(mCurrentYear - 1, mCurrentMonth, mIsContainOtherMonthDate));
+        mLastDayCellsV.addAll(CalendarUtils.getInstance().getMonthDate(mCurrentYear - 1, mCurrentMonth,
+                mIsContainOtherMonthDate, mIsSundayAtFirst));
 
         for (int index = 0; index < mDayRectFs.size(); index++) {
             mDayBeans.get(index).setRectF(mDayRectFs.get(index));
@@ -752,5 +759,12 @@ public class CalendarView extends View {
 
     public void setContainOtherMonthDate(boolean isContainOtherMonthDate) {
         mIsContainOtherMonthDate = isContainOtherMonthDate;
+    }
+
+    /**
+     * @param isSundayAtFirst true 周日为第一天，false 周一为第一天
+     */
+    public void setmIsSundayAtFirst(boolean isSundayAtFirst) {
+        mIsSundayAtFirst = isSundayAtFirst;
     }
 }
