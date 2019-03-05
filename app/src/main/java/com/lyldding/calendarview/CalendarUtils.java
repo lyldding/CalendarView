@@ -10,9 +10,9 @@ import java.util.List;
 
 /**
  * @author https://github.com/lyldding/CalendarView
- * @date 2019/2/28
+ * @date 2019/2/1
  */
-public class CalendarManager {
+public class CalendarUtils {
     public static int DAY_ROWS = 6;
     public static int WEEK_COLUMN = 7;
     public static int DAY_CELL_NUM = DAY_ROWS * WEEK_COLUMN;
@@ -20,18 +20,18 @@ public class CalendarManager {
     /**
      * 缓存每月天数信息
      */
-    private HashMap<String, List<DayCell>> mCacheMap;
+    private HashMap<String, List<DayBean>> mCacheMap;
 
-    private CalendarManager() {
+    private CalendarUtils() {
         mCacheMap = new HashMap<>();
     }
 
-    public static CalendarManager getInstance() {
+    public static CalendarUtils getInstance() {
         return Holder.INSTANCE;
     }
 
     private final static class Holder {
-        private final static CalendarManager INSTANCE = new CalendarManager();
+        private final static CalendarUtils INSTANCE = new CalendarUtils();
     }
 
     /**
@@ -41,12 +41,12 @@ public class CalendarManager {
      * @param month 当前月份
      * @return
      */
-    public List<DayCell> getMonthDate(int year, int month) {
+    public List<DayBean> getMonthDate(int year, int month) {
         String key = year + "" + month;
         if (mCacheMap.containsKey(key)) {
             return mCacheMap.get(key);
         }
-        List<DayCell> dayCells = new ArrayList<>();
+        List<DayBean> dayBeans = new ArrayList<>();
         int firstDayOfWeek = getFirstDayOfWeekByMonth(year, month - 1);
 
         int[] date = getLastMonthOfYear(year, month);
@@ -60,17 +60,17 @@ public class CalendarManager {
         int nextMonth = date[1];
 
         for (int i = 0; i < firstDayOfWeek; i++) {
-            dayCells.add(createDayCell(lastYear, lastMonth, lastMonthDays - firstDayOfWeek + 1 + i, false));
+            dayBeans.add(createDayCell(lastYear, lastMonth, lastMonthDays - firstDayOfWeek + 1 + i, false));
         }
         for (int i = 0; i < currentMonthDays; i++) {
-            dayCells.add(createDayCell(year, month, i + 1, true));
+            dayBeans.add(createDayCell(year, month, i + 1, true));
         }
 
-        for (int i = 0; i < CalendarManager.DAY_CELL_NUM - currentMonthDays - firstDayOfWeek; i++) {
-            dayCells.add(createDayCell(nextYear, nextMonth, i + 1, false));
+        for (int i = 0; i < CalendarUtils.DAY_CELL_NUM - currentMonthDays - firstDayOfWeek; i++) {
+            dayBeans.add(createDayCell(nextYear, nextMonth, i + 1, false));
         }
-        mCacheMap.put(key, dayCells);
-        return dayCells;
+        mCacheMap.put(key, dayBeans);
+        return dayBeans;
     }
 
     public int[] getNextMonthOfYear(int year, int month) {
@@ -100,20 +100,20 @@ public class CalendarManager {
     }
 
 
-    private DayCell createDayCell(int year, int month, int day, boolean isCurrentMonth) {
-        DayCell dayCell = new DayCell();
-        dayCell.setCurrentMonth(isCurrentMonth);
-        dayCell.setYear(year);
-        dayCell.setMonth(month);
-        dayCell.setDay(day);
-        return dayCell;
+    private DayBean createDayCell(int year, int month, int day, boolean isCurrentMonth) {
+        DayBean dayBean = new DayBean();
+        dayBean.setCurrentMonth(isCurrentMonth);
+        dayBean.setYear(year);
+        dayBean.setMonth(month);
+        dayBean.setDay(day);
+        return dayBean;
     }
 
     /**
      * 是否为同一天
      */
-    public boolean isSameDay(DayCell dayCell, int[] date) {
-        return date[2] == dayCell.getDay() && date[1] == dayCell.getMonth() && date[0] == dayCell.getYear();
+    public boolean isSameDay(DayBean dayBean, int[] date) {
+        return date[2] == dayBean.getDay() && date[1] == dayBean.getMonth() && date[0] == dayBean.getYear();
     }
 
     /**

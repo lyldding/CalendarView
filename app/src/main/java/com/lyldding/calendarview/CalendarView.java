@@ -6,6 +6,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.support.annotation.ColorInt;
 import android.support.annotation.Nullable;
 import android.support.v4.view.ViewCompat;
 import android.util.AttributeSet;
@@ -21,19 +22,21 @@ import java.util.List;
 
 /**
  * @author https://github.com/lyldding/CalendarView
- * @date 2019/2/28
+ * @date 2019/2/1
  */
 public class CalendarView extends View {
     private static final String TAG = "CalendarView";
-    private int mTextColor = 0xff453869;
-    private int mTextOtherMonthColor = 0xffafadbc;
-    private int mWeekBackgroundColor = 0xffd2baff;
-    private int mBackground = 0xffe5d7ff;
-    private int mSelectColor = 0xff8157cb;
+    private int mTextColor = 0xff267782;
+    private int mOtherMonthTextColor = 0xff77adbc;
+    private int mWeekBackgroundColor = 0xff88baff;
+    private int mBackground = 0xff33d7ff;
+    private int mSelectBackgroundColor = 0xff1157cb;
+    private int mSelectTextColor = Color.RED;
     private int mRadius;
     private int mStrokeWidth;
     private int mItemWidth;
-    private int mDayHeight;
+    private int mDayContentHeight;
+    private int mDayItemHeight;
     private int mWeekHeight;
     private int mTitleHeight;
     private Paint mPaint;
@@ -48,8 +51,10 @@ public class CalendarView extends View {
     private RectF mDayContentRectF;
     private Rect mDayTextRect;
     private List<RectF> mDayRectFs;
-    private List<RectF> mNextDayRectFs;
-    private List<RectF> mLastDayRectFs;
+    private List<RectF> mNextMonthDayRectFs;
+    private List<RectF> mLastMonthDayRectFs;
+    private List<RectF> mNextYearDayRectFsV;
+    private List<RectF> mLastYearDayRectFsV;
     private List<RectF> mWeekRectFs;
     private Context mContext;
     private String mTitleText;
@@ -57,9 +62,11 @@ public class CalendarView extends View {
     private float mTouchDownX;
     private float mTouchDownY;
 
-    private List<DayCell> mDayCells;
-    private List<DayCell> mNextDayCells;
-    private List<DayCell> mLastDayCells;
+    private List<DayBean> mDayBeans;
+    private List<DayBean> mNextDayBeans;
+    private List<DayBean> mLastDayBeans;
+    private List<DayBean> mNextDayCellsV;
+    private List<DayBean> mLastDayCellsV;
     private OnClickDayListener mOnClickDayListener;
 
     private int mCurrentYear;
@@ -71,10 +78,16 @@ public class CalendarView extends View {
     private boolean mIsScrolling;
     private int mTouchSlop;
     private float mOffsetX;
+    private float mOffsetY;
     private Type mScrollToType;
 
     private Scroller mContentScroller;
     private VelocityTracker mVelocityTracker;
+
+    private ScrollOrientation mScrollOrientation = ScrollOrientation.None;
+    private String mSelectDateStr;
+    private boolean mIsShowSelectDate = true;
+    private boolean mIsShowCurrentDate = true;
 
     enum Type {
         /**
@@ -82,7 +95,22 @@ public class CalendarView extends View {
          */
         LAST,
         NEXT,
+        /**
+         * 上一年，下一年
+         */
+        LAST_YEAR,
+        NEXT_YEAR,
         NONE
+    }
+
+    enum ScrollOrientation {
+        /**
+         * 滑动方向
+         */
+        Vertical,
+        Horizontal,
+        All,
+        None
     }
 
 
@@ -104,12 +132,10 @@ public class CalendarView extends View {
     private void init(Context context) {
         mContext = context;
 
-        mRadius = CalendarManager.getInstance().dip2px(context, 2.5f);
-        mStrokeWidth = CalendarManager.getInstance().dip2px(context, 1);
-        mItemWidth = CalendarManager.getInstance().dip2px(context, 45);
-        mDayHeight = CalendarManager.getInstance().dip2px(context, 30);
-        mWeekHeight = CalendarManager.getInstance().dip2px(context, 20);
-        mTitleHeight = CalendarManager.getInstance().dip2px(context, 30);
+        mRadius = CalendarUtils.getInstance().dip2px(context, 2.5f);
+        mStrokeWidth = CalendarUtils.getInstance().dip2px(context, 1);
+        mWeekHeight = CalendarUtils.getInstance().dip2px(context, 20);
+        mTitleHeight = CalendarUtils.getInstance().dip2px(context, 30);
 
         mTouchSlop = ViewConfiguration.get(mContext).getScaledTouchSlop();
         mContentScroller = new Scroller(context);
@@ -131,33 +157,40 @@ public class CalendarView extends View {
         mNextRectF = new RectF();
         mDayContentRectF = new RectF();
 
-        mDayRectFs = new ArrayList<>(CalendarManager.DAY_CELL_NUM);
-        mNextDayRectFs = new ArrayList<>(CalendarManager.DAY_CELL_NUM);
-        mLastDayRectFs = new ArrayList<>(CalendarManager.DAY_CELL_NUM);
+        mDayRectFs = new ArrayList<>(CalendarUtils.DAY_CELL_NUM);
+        mNextMonthDayRectFs = new ArrayList<>(CalendarUtils.DAY_CELL_NUM);
+        mLastMonthDayRectFs = new ArrayList<>(CalendarUtils.DAY_CELL_NUM);
+        mNextYearDayRectFsV = new ArrayList<>(CalendarUtils.DAY_CELL_NUM);
+        mLastYearDayRectFsV = new ArrayList<>(CalendarUtils.DAY_CELL_NUM);
 
-        mWeekRectFs = new ArrayList<>(CalendarManager.WEEK_COLUMN);
+        mWeekRectFs = new ArrayList<>(CalendarUtils.WEEK_COLUMN);
 
-        mDayCells = new ArrayList<>(CalendarManager.DAY_CELL_NUM);
-        mNextDayCells = new ArrayList<>(CalendarManager.DAY_CELL_NUM);
-        mLastDayCells = new ArrayList<>(CalendarManager.DAY_CELL_NUM);
+        mDayBeans = new ArrayList<>(CalendarUtils.DAY_CELL_NUM);
+        mNextDayBeans = new ArrayList<>(CalendarUtils.DAY_CELL_NUM);
+        mLastDayBeans = new ArrayList<>(CalendarUtils.DAY_CELL_NUM);
+        mNextDayCellsV = new ArrayList<>(CalendarUtils.DAY_CELL_NUM);
+        mLastDayCellsV = new ArrayList<>(CalendarUtils.DAY_CELL_NUM);
 
 
-        for (int index = 0; index < CalendarManager.WEEK_COLUMN; index++) {
+        for (int index = 0; index < CalendarUtils.WEEK_COLUMN; index++) {
             mWeekRectFs.add(new RectF());
         }
-        for (int row = 0; row < CalendarManager.DAY_CELL_NUM; row++) {
+        for (int row = 0; row < CalendarUtils.DAY_CELL_NUM; row++) {
             mDayRectFs.add(new RectF());
-            mNextDayRectFs.add(new RectF());
-            mLastDayRectFs.add(new RectF());
+            mNextMonthDayRectFs.add(new RectF());
+            mLastMonthDayRectFs.add(new RectF());
+
+            mNextYearDayRectFsV.add(new RectF());
+            mLastYearDayRectFsV.add(new RectF());
         }
 
-        mInitDate = CalendarManager.getInstance().getCurrentDate();
+        mInitDate = CalendarUtils.getInstance().getCurrentDate();
         mCurrentYear = mInitDate[0];
         mCurrentMonth = mInitDate[1];
 
 
-        mViewHeight = CalendarManager.getInstance().dip2px(getContext(), 244);
-        mViewWidth = CalendarManager.getInstance().dip2px(getContext(), 327);
+        mViewHeight = CalendarUtils.getInstance().dip2px(getContext(), 244);
+        mViewWidth = CalendarUtils.getInstance().dip2px(getContext(), 327);
 
         mDayTextRect = new Rect();
     }
@@ -169,39 +202,46 @@ public class CalendarView extends View {
         mViewHeight = getMeasuredHeight();
         mViewWidth = getMeasuredWidth();
         Log.d(TAG, " mViewHeight = " + mViewHeight + " mViewWidth = " + mViewWidth);
-        mViewRectF.set(0 + mStrokeWidth / 2f, 0 + mStrokeWidth / 2f, mViewWidth - mStrokeWidth / 2f, mViewHeight - mStrokeWidth / 2f);
-        mItemWidth = (mViewWidth - mStrokeWidth) / CalendarManager.WEEK_COLUMN;
-        mDayHeight = (mViewHeight - mTitleHeight - mWeekHeight) / CalendarManager.DAY_ROWS;
+        measure();
+        Log.e(TAG, "onMeasure: ok");
+    }
 
-        mTitleTextRectF.set(mViewWidth / 2 - CalendarManager.getInstance().dip2px(mContext, 85) / 2, 0, mViewWidth / 2 + CalendarManager.getInstance().dip2px(mContext, 85) / 2, mTitleHeight);
-        mNextRectF.set(mTitleTextRectF.right, 0, mTitleTextRectF.right + CalendarManager.getInstance().dip2px(mContext, 15), mTitleHeight);
-        mLastRectF.set(mTitleTextRectF.left - CalendarManager.getInstance().dip2px(mContext, 15), 0, mTitleTextRectF.left, mTitleHeight);
+    private void measure() {
+        mViewRectF.set(0 + mStrokeWidth / 2f, 0 + mStrokeWidth / 2f, mViewWidth - mStrokeWidth / 2f, mViewHeight - mStrokeWidth / 2f);
+        mItemWidth = mViewWidth / CalendarUtils.WEEK_COLUMN;
+        mDayContentHeight = mViewHeight - mTitleHeight - mWeekHeight;
+        mDayItemHeight = mDayContentHeight / CalendarUtils.DAY_ROWS;
+
+        mTitleTextRectF.set(mViewWidth / 2 - CalendarUtils.getInstance().dip2px(mContext, 85) / 2, 0, mViewWidth / 2 + CalendarUtils.getInstance().dip2px(mContext, 85) / 2, mTitleHeight);
+        mNextRectF.set(mTitleTextRectF.right, 0, mTitleTextRectF.right + CalendarUtils.getInstance().dip2px(mContext, 15), mTitleHeight);
+        mLastRectF.set(mTitleTextRectF.left - CalendarUtils.getInstance().dip2px(mContext, 15), 0, mTitleTextRectF.left, mTitleHeight);
 
         mTitleRectF.set(0, 0, mViewWidth, mTitleHeight);
 
-        for (int index = 0; index < CalendarManager.WEEK_COLUMN; index++) {
-            float startX = index * mItemWidth + mStrokeWidth * 1.5f;
+        for (int index = 0; index < CalendarUtils.WEEK_COLUMN; index++) {
+            float startX = index * mItemWidth;
             mWeekRectFs.get(index).set(startX, mTitleHeight, startX + mItemWidth, mTitleHeight + mWeekHeight);
         }
 
-        for (int row = 0; row < CalendarManager.DAY_ROWS; row++) {
-            int startY = mTitleHeight + mWeekHeight + row * mDayHeight;
-            for (int column = 0; column < CalendarManager.WEEK_COLUMN; column++) {
-                int index = row * CalendarManager.WEEK_COLUMN + column;
-                float startX = column * mItemWidth + mStrokeWidth * 1.5f;
+        for (int row = 0; row < CalendarUtils.DAY_ROWS; row++) {
+            float startY = mTitleHeight + mWeekHeight + row * mDayItemHeight;
+            for (int column = 0; column < CalendarUtils.WEEK_COLUMN; column++) {
+                int index = row * CalendarUtils.WEEK_COLUMN + column;
+                float startX = column * mItemWidth;
                 RectF rectF = mDayRectFs.get(index);
-                rectF.set(startX, startY, startX + mItemWidth, startY + mDayHeight);
-                mNextDayRectFs.get(index).set(rectF.left + mViewWidth, rectF.top, rectF.right + mViewWidth, rectF.bottom);
-                mLastDayRectFs.get(index).set(rectF.left - mViewWidth, rectF.top, rectF.right - mViewWidth, rectF.bottom);
+                rectF.set(startX, startY, startX + mItemWidth, startY + mDayItemHeight);
+                mNextMonthDayRectFs.get(index).set(rectF.left + mViewWidth, rectF.top, rectF.right + mViewWidth, rectF.bottom);
+                mLastMonthDayRectFs.get(index).set(rectF.left - mViewWidth, rectF.top, rectF.right - mViewWidth, rectF.bottom);
+
+                mNextYearDayRectFsV.get(index).set(rectF.left, rectF.top + mDayContentHeight, rectF.right, rectF.bottom + mDayContentHeight);
+                mLastYearDayRectFsV.get(index).set(rectF.left, rectF.top - mDayContentHeight, rectF.right, rectF.bottom - mDayContentHeight);
             }
         }
 
         mDayContentRectF.set(mDayRectFs.get(0).left, mDayRectFs.get(0).top,
-                mDayRectFs.get(CalendarManager.DAY_CELL_NUM - 1).right, mDayRectFs.get(CalendarManager.DAY_CELL_NUM - 1).bottom);
+                mDayRectFs.get(CalendarUtils.DAY_CELL_NUM - 1).right, mDayRectFs.get(CalendarUtils.DAY_CELL_NUM - 1).bottom);
 
         updateMonth(mCurrentYear, mCurrentMonth, Type.NONE);
-
-        Log.e(TAG, "onMeasure: ok");
     }
 
 
@@ -230,10 +270,12 @@ public class CalendarView extends View {
         super.computeScroll();
         if (mContentScroller.computeScrollOffset()) {
             mOffsetX = mContentScroller.getCurrX();
+            mOffsetY = mContentScroller.getCurrY();
             ViewCompat.postInvalidateOnAnimation(this);
         } else if (mIsScrolling) {
             mIsScrolling = false;
             mOffsetX = 0;
+            mOffsetY = 0;
             updateMonth(mCurrentYear, mCurrentMonth, mScrollToType);
         }
     }
@@ -241,34 +283,41 @@ public class CalendarView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         mIsDrawing = true;
-        drawTitle(canvas);
-        drawButton(canvas);
+        drawBackground(canvas);
+        drawDataStr(canvas);
+        drawSwitchButton(canvas);
         drawWeek(canvas);
-        drawDay(canvas);
-        drawOuter(canvas);
+        drawAllDay(canvas);
+        drawOuterLine(canvas);
         mIsDrawing = false;
     }
 
-    private void drawTitle(Canvas canvas) {
+    private void drawBackground(Canvas canvas) {
+        if (getBackground() != null) {
+            getBackground().draw(canvas);
+        } else {
+            mPaint.setStyle(Paint.Style.FILL);
+            mPaint.setColor(mBackground);
+            canvas.drawRoundRect(mViewRectF, mRadius, mRadius, mPaint);
+        }
+    }
+
+    private void drawDataStr(Canvas canvas) {
         mPaint.setStyle(Paint.Style.STROKE);
         mPaint.setColor(Color.WHITE);
         canvas.drawRect(mTitleRectF, mPaint);
 
-        mPaint.setStyle(Paint.Style.FILL);
-        mPaint.setColor(mBackground);
-        canvas.drawRect(mTitleRectF, mPaint);
-
         mTextPaint.setColor(mTextColor);
-        mTextPaint.setTextSize(CalendarManager.getInstance().dip2px(mContext, 15));
-        canvas.drawText(mTitleText, mTitleTextRectF.centerX(), getBaseline(mTitleTextRectF), mTextPaint);
+        mTextPaint.setTextSize(CalendarUtils.getInstance().dip2px(mContext, 15));
+        canvas.drawText(mTitleText, mTitleTextRectF.centerX(), getTextBaseline(mTitleTextRectF), mTextPaint);
 
     }
 
-    private void drawButton(Canvas canvas) {
+    private void drawSwitchButton(Canvas canvas) {
         //切换按钮
         mPaint.setColor(mTextColor);
-        int y = CalendarManager.getInstance().dip2px(mContext, 4.5f);
-        int x = CalendarManager.getInstance().dip2px(mContext, 5.5f);
+        int y = CalendarUtils.getInstance().dip2px(mContext, 4.5f);
+        int x = CalendarUtils.getInstance().dip2px(mContext, 5.5f);
         canvas.drawLine(mLastRectF.centerX() - mLastRectF.width() / 4,
                 mLastRectF.centerY(), mLastRectF.centerX() + x - mLastRectF.width() / 4, mLastRectF.centerY() - y, mPaint);
         canvas.drawLine(mLastRectF.centerX() - mLastRectF.width() / 4,
@@ -283,67 +332,70 @@ public class CalendarView extends View {
 
     private void drawWeek(Canvas canvas) {
         //Week
-        for (int index = 0; index < CalendarManager.WEEK_COLUMN; index++) {
+        for (int index = 0; index < CalendarUtils.WEEK_COLUMN; index++) {
             RectF rectF = mWeekRectFs.get(index);
-            mPaint.setStyle(Paint.Style.STROKE);
-            mPaint.setColor(Color.WHITE);
-            canvas.drawRect(rectF, mPaint);
 
             mPaint.setStyle(Paint.Style.FILL);
             mPaint.setColor(mWeekBackgroundColor);
             canvas.drawRect(rectF, mPaint);
 
-            mTextPaint.setTextSize(CalendarManager.getInstance().dip2px(mContext, 9));
-            canvas.drawText(CalendarManager.WEEKS.get(index), rectF.centerX(), getBaseline(rectF), mTextPaint);
+            mPaint.setStyle(Paint.Style.STROKE);
+            mPaint.setColor(Color.WHITE);
+            canvas.drawRect(rectF, mPaint);
+
+            mTextPaint.setTextSize(CalendarUtils.getInstance().dip2px(mContext, 9));
+            canvas.drawText(CalendarUtils.WEEKS.get(index), rectF.centerX(), getTextBaseline(rectF), mTextPaint);
 
         }
     }
 
-    private void drawDay(Canvas canvas) {
+    private void drawAllDay(Canvas canvas) {
         canvas.save();
-        canvas.translate(mOffsetX, 0);
+        canvas.clipRect(0, mViewHeight - mDayContentHeight, mViewWidth, mViewHeight);
+        canvas.translate(mOffsetX, mOffsetY);
         //day
-        for (int index = 0; index < CalendarManager.DAY_CELL_NUM; index++) {
-            drawDayItem(canvas, mDayCells.get(index));
-            drawDayItem(canvas, mNextDayCells.get(index));
-            drawDayItem(canvas, mLastDayCells.get(index));
+        for (int index = 0; index < CalendarUtils.DAY_CELL_NUM; index++) {
+            drawDay(canvas, mDayBeans.get(index));
+            drawDay(canvas, mNextDayBeans.get(index));
+            drawDay(canvas, mLastDayBeans.get(index));
+            drawDay(canvas, mNextDayCellsV.get(index));
+            drawDay(canvas, mLastDayCellsV.get(index));
         }
         canvas.restore();
     }
 
-    private void drawDayItem(Canvas canvas, DayCell dayCell) {
+    private void drawDay(Canvas canvas, DayBean dayBean) {
         mPaint.setStyle(Paint.Style.STROKE);
         mPaint.setColor(Color.WHITE);
-        canvas.drawRect(dayCell.getRectF(), mPaint);
+        canvas.drawRect(dayBean.getRectF(), mPaint);
 
-        mPaint.setStyle(Paint.Style.FILL);
-        mPaint.setColor(mBackground);
-        canvas.drawRect(dayCell.getRectF(), mPaint);
 
-        mTextPaint.setColor(dayCell.isCurrentMonth() ? mTextColor : mTextOtherMonthColor);
-        mTextPaint.setTextSize(CalendarManager.getInstance().dip2px(mContext, 12));
-        if (dayCell.isCurrentMonth() && CalendarManager.getInstance().isSameDay(dayCell, mInitDate)) {
-            mTextPaint.setColor(Color.WHITE);
-            mPaint.setColor(mSelectColor);
-            String day = dayCell.getDay() + "";
+        mTextPaint.setColor(dayBean.isCurrentMonth() ? mTextColor : mOtherMonthTextColor);
+        mTextPaint.setTextSize(CalendarUtils.getInstance().dip2px(mContext, 12));
+        if (dayBean.isCurrentMonth() &&
+                ((mIsShowSelectDate && dayBean.getDateStr().equals(mSelectDateStr)) ||
+                        (mIsShowCurrentDate && CalendarUtils.getInstance().isSameDay(dayBean, mInitDate)))) {
+            mTextPaint.setColor(mSelectTextColor);
+            mPaint.setStyle(Paint.Style.FILL);
+            mPaint.setColor(mSelectBackgroundColor);
+            String day = dayBean.getDay() + "";
             float textWidth = mTextPaint.measureText(day);
             mTextPaint.getTextBounds(day, 0, 1, mDayTextRect);
             float radiusMin = (float) (Math.sqrt(textWidth * textWidth + mDayTextRect.height() * mDayTextRect.height()) / 2f);
-            float radiusMax = Math.min(mItemWidth, mDayHeight) / 2f;
-            canvas.drawCircle(dayCell.getRectF().centerX(), dayCell.getRectF().centerY(),
+            float radiusMax = Math.min(mItemWidth, mDayItemHeight) / 2f;
+            canvas.drawCircle(dayBean.getRectF().centerX(), dayBean.getRectF().centerY(),
                     radiusMin > radiusMax ? radiusMax : (radiusMin + radiusMax) / 2f, mPaint);
         }
-        canvas.drawText(String.valueOf(dayCell.getDay()), dayCell.getRectF().centerX(), getBaseline(dayCell.getRectF()), mTextPaint);
+        canvas.drawText(String.valueOf(dayBean.getDay()), dayBean.getRectF().centerX(), getTextBaseline(dayBean.getRectF()), mTextPaint);
     }
 
-    private void drawOuter(Canvas canvas) {
-        //外围
+    private void drawOuterLine(Canvas canvas) {
         mPaint.setStyle(Paint.Style.STROKE);
         mPaint.setColor(mTextColor);
         canvas.drawRoundRect(mViewRectF, mRadius, mRadius, mPaint);
     }
 
-    private float getBaseline(RectF rectF) {
+    private float getTextBaseline(RectF rectF) {
         Paint.FontMetrics fontMetrics = mTextPaint.getFontMetrics();
         float top = fontMetrics.top;
         float bottom = fontMetrics.bottom;
@@ -359,15 +411,13 @@ public class CalendarView extends View {
         mVelocityTracker.addMovement(event);
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
-                mTouchDownX = event.getX();
-                mTouchDownY = event.getY();
-                mIsClick = true;
+                handleDown(event);
                 break;
             case MotionEvent.ACTION_MOVE:
-                handleActionMove(event);
+                handleMove(event);
                 break;
             case MotionEvent.ACTION_UP:
-                handleActionUp(event);
+                handleUp(event);
                 break;
             default:
                 Log.d(TAG, "onTouchEvent:  event  Action =" + event.getAction());
@@ -379,50 +429,96 @@ public class CalendarView extends View {
         int[] date = new int[]{year, month};
         switch (type) {
             case LAST:
-                date = CalendarManager.getInstance().getLastMonthOfYear(year, month);
+                date = CalendarUtils.getInstance().getLastMonthOfYear(year, month);
                 break;
             case NEXT:
-                date = CalendarManager.getInstance().getNextMonthOfYear(year, month);
+                date = CalendarUtils.getInstance().getNextMonthOfYear(year, month);
+                break;
+            case LAST_YEAR:
+                date[0] = year - 1;
+                break;
+            case NEXT_YEAR:
+                date[0] = year + 1;
                 break;
             default:
         }
-        mDayCells.clear();
-        mDayCells.addAll(CalendarManager.getInstance().getMonthDate(date[0], date[1]));
+        mDayBeans.clear();
+        mDayBeans.addAll(CalendarUtils.getInstance().getMonthDate(date[0], date[1]));
         mCurrentYear = date[0];
         mCurrentMonth = date[1];
         mTitleText = mCurrentYear + "年" + mCurrentMonth + "月";
 
-        int[] dateNext = CalendarManager.getInstance().getNextMonthOfYear(mCurrentYear, mCurrentMonth);
-        mNextDayCells.clear();
-        mNextDayCells.addAll(CalendarManager.getInstance().getMonthDate(dateNext[0], dateNext[1]));
+        int[] dateNext = CalendarUtils.getInstance().getNextMonthOfYear(mCurrentYear, mCurrentMonth);
+        mNextDayBeans.clear();
+        mNextDayBeans.addAll(CalendarUtils.getInstance().getMonthDate(dateNext[0], dateNext[1]));
 
-        int[] dateLast = CalendarManager.getInstance().getLastMonthOfYear(mCurrentYear, mCurrentMonth);
-        mLastDayCells.clear();
-        mLastDayCells.addAll(CalendarManager.getInstance().getMonthDate(dateLast[0], dateLast[1]));
+        int[] dateLast = CalendarUtils.getInstance().getLastMonthOfYear(mCurrentYear, mCurrentMonth);
+        mLastDayBeans.clear();
+        mLastDayBeans.addAll(CalendarUtils.getInstance().getMonthDate(dateLast[0], dateLast[1]));
+
+        mNextDayCellsV.clear();
+        mNextDayCellsV.addAll(CalendarUtils.getInstance().getMonthDate(mCurrentYear + 1, mCurrentMonth));
+        mLastDayCellsV.clear();
+        mLastDayCellsV.addAll(CalendarUtils.getInstance().getMonthDate(mCurrentYear - 1, mCurrentMonth));
 
         for (int index = 0; index < mDayRectFs.size(); index++) {
-            mDayCells.get(index).setRectF(mDayRectFs.get(index));
-            mNextDayCells.get(index).setRectF(mNextDayRectFs.get(index));
-            mLastDayCells.get(index).setRectF(mLastDayRectFs.get(index));
+            mDayBeans.get(index).setRectF(mDayRectFs.get(index));
+            mNextDayBeans.get(index).setRectF(mNextMonthDayRectFs.get(index));
+            mLastDayBeans.get(index).setRectF(mLastMonthDayRectFs.get(index));
+
+            mNextDayCellsV.get(index).setRectF(mNextYearDayRectFsV.get(index));
+            mLastDayCellsV.get(index).setRectF(mLastYearDayRectFsV.get(index));
         }
         Log.d(TAG, "updateMonth: mTitleText = " + mTitleText);
     }
 
-    private void handleActionMove(MotionEvent event) {
+    private void handleDown(MotionEvent event) {
+        mTouchDownX = event.getX();
+        mTouchDownY = event.getY();
+        mIsClick = true;
+    }
+
+    private void handleMove(MotionEvent event) {
         mOffsetX = event.getX() - mTouchDownX;
-        if (Math.abs(mOffsetX) > mTouchSlop) {
+        mOffsetY = event.getY() - mTouchDownY;
+        if (Math.abs(mOffsetY) >= mDayContentHeight) {
+            mOffsetY = mOffsetY > 0 ? mDayContentHeight : -mDayContentHeight;
+        }
+
+        if (Math.abs(mOffsetX) >= mViewWidth) {
+            mOffsetX = mOffsetX > 0 ? mViewWidth : -mViewWidth;
+        }
+
+        if (Math.abs(mOffsetX) > mTouchSlop || Math.abs(mOffsetY) > mTouchSlop) {
             mIsClick = false;
         }
-        if (mIsScrolling || !mDayContentRectF.contains(mTouchDownX, mTouchDownY)) {
+        if (mIsScrolling ||
+                !mDayContentRectF.contains(mTouchDownX, mTouchDownY)) {
             return;
         }
+
+        if (mScrollOrientation == ScrollOrientation.None) {
+            if (Math.abs(mOffsetX) > Math.abs(mOffsetY)) {
+                mScrollOrientation = ScrollOrientation.Horizontal;
+            } else if (Math.abs(mOffsetX) < Math.abs(mOffsetY)) {
+                mScrollOrientation = ScrollOrientation.Vertical;
+            }
+        }
+        if (mScrollOrientation == ScrollOrientation.Horizontal) {
+            mOffsetY = 0;
+        } else if (mScrollOrientation == ScrollOrientation.Vertical) {
+            mOffsetX = 0;
+        } else {
+            return;
+        }
+
         ViewCompat.postInvalidateOnAnimation(this);
     }
 
-    private void handleActionUp(MotionEvent event) {
-        mOffsetX = event.getX() - mTouchDownX;
+    private void handleUp(MotionEvent event) {
         if (mIsClick) {
             mOffsetX = 0;
+            mOffsetY = 0;
             if (isActionDownInsideRectF(mNextRectF)) {
                 updateMonth(mCurrentYear, mCurrentMonth, Type.NEXT);
                 ViewCompat.postInvalidateOnAnimation(this);
@@ -431,9 +527,11 @@ public class CalendarView extends View {
                 ViewCompat.postInvalidateOnAnimation(this);
             } else if (isActionDownInsideRectF(mDayContentRectF)) {
                 if (mOnClickDayListener != null) {
-                    for (DayCell dayCell : mDayCells) {
-                        if (dayCell.isContains(mTouchDownX, mTouchDownY)) {
-                            mOnClickDayListener.onClickDay(dayCell.getYear(), dayCell.getMonth(), dayCell.getDay());
+                    for (DayBean dayBean : mDayBeans) {
+                        if (dayBean.isCurrentMonth() && dayBean.isContains(mTouchDownX, mTouchDownY)) {
+                            mSelectDateStr = dayBean.getDateStr();
+                            mOnClickDayListener.onClickDay(dayBean.getYear(), dayBean.getMonth(), dayBean.getDay());
+                            ViewCompat.postInvalidateOnAnimation(this);
                             break;
                         }
                     }
@@ -443,6 +541,7 @@ public class CalendarView extends View {
             startScroll(event);
         }
         mIsClick = false;
+        mScrollOrientation = ScrollOrientation.None;
     }
 
     private boolean isActionDownInsideRectF(RectF rectF) {
@@ -452,20 +551,35 @@ public class CalendarView extends View {
     private void startScroll(MotionEvent event) {
         mIsScrolling = true;
         mVelocityTracker.computeCurrentVelocity(1000);
-        int dx = 0;
-        if (mVelocityTracker.getXVelocity() < -200 || mOffsetX < -mViewWidth * 0.3) {
-            dx = (int) -(mViewWidth + mOffsetX);
-            mScrollToType = Type.NEXT;
-        } else if (mVelocityTracker.getXVelocity() > 200 || mOffsetX > mViewWidth * 0.3) {
-            dx = (int) (mViewWidth - mOffsetX);
-            mScrollToType = Type.LAST;
-        } else {
-            dx = (int) -mOffsetX;
-            mScrollToType = Type.NONE;
+        if (mScrollOrientation == ScrollOrientation.Horizontal) {
+            int dx = 0;
+            if (mVelocityTracker.getXVelocity() < -200 || mOffsetX < -mViewWidth * 0.3) {
+                dx = (int) -(mViewWidth + mOffsetX);
+                mScrollToType = Type.NEXT;
+            } else if (mVelocityTracker.getXVelocity() > 200 || mOffsetX > mViewWidth * 0.3) {
+                dx = (int) (mViewWidth - mOffsetX);
+                mScrollToType = Type.LAST;
+            } else {
+                dx = (int) -mOffsetX;
+                mScrollToType = Type.NONE;
+            }
+            mContentScroller.startScroll((int) mOffsetX, 0, dx, 0, 500);
+            ViewCompat.postInvalidateOnAnimation(this);
+        } else if (mScrollOrientation == ScrollOrientation.Vertical) {
+            int dY = 0;
+            if (mVelocityTracker.getYVelocity() < -200 || mOffsetY < -mDayContentHeight * 0.3) {
+                dY = (int) -(mDayContentHeight + mOffsetY);
+                mScrollToType = Type.NEXT_YEAR;
+            } else if (mVelocityTracker.getYVelocity() > 200 || mOffsetY > mDayContentHeight * 0.3) {
+                dY = (int) (mDayContentHeight - mOffsetY);
+                mScrollToType = Type.LAST_YEAR;
+            } else {
+                dY = (int) -mOffsetY;
+                mScrollToType = Type.NONE;
+            }
+            mContentScroller.startScroll(0, (int) mOffsetY, 0, dY, 500);
+            ViewCompat.postInvalidateOnAnimation(this);
         }
-        mContentScroller.startScroll((int) mOffsetX, 0, dx, 0, 500);
-        Log.d(TAG, "startScroll: dx  = " + dx);
-        ViewCompat.postInvalidateOnAnimation(this);
         mVelocityTracker.clear();
     }
 
@@ -479,4 +593,34 @@ public class CalendarView extends View {
     public void setOnClickDayListener(OnClickDayListener onClickDayListener) {
         mOnClickDayListener = onClickDayListener;
     }
+
+    public void setBackground(@ColorInt int background) {
+        mBackground = background;
+    }
+
+    public void setTextColor(@ColorInt int textColor) {
+        mTextColor = textColor;
+    }
+
+    public void setSelectBackgroundColor(@ColorInt int selectBackgroundColor) {
+        mSelectBackgroundColor = selectBackgroundColor;
+    }
+
+    public void setSelectTextColor(@ColorInt int selectTextColor) {
+        mSelectTextColor = selectTextColor;
+    }
+
+    public void setShowCurrentDate(boolean show) {
+        mIsShowCurrentDate = show;
+    }
+
+    public void setShowSelectedDate(boolean show) {
+        mIsShowSelectDate = show;
+    }
+
+    public void setWeekBackgroundColor(@ColorInt int weekBackgroundColor) {
+        mWeekBackgroundColor = weekBackgroundColor;
+    }
+
+
 }

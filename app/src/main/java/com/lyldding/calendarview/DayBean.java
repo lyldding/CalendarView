@@ -4,9 +4,9 @@ import android.graphics.RectF;
 
 /**
  * @author https://github.com/lyldding/CalendarView
- * @date 2019/2/28
+ * @date 2019/2/1
  */
-public class DayCell {
+public class DayBean {
     private RectF mRectF;
     private int mYear;
     private int mMonth;

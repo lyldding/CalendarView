@@ -9,15 +9,15 @@ import android.view.WindowManager;
 
 /**
  * @author https://github.com/lyldding/CalendarView
- * @date 2019/3/1
+ * @date 2019/2/1
  */
-public class CalenderDialogFragment extends DialogFragment implements CalendarView.OnClickDayListener {
+public class CalenderDialog extends DialogFragment implements CalendarView.OnClickDayListener {
 
     private OnClickDayListener mOnClickDayListener;
     private boolean mIsDismissAfterClickDay;
 
-    public static CalenderDialogFragment newInstance() {
-        return new CalenderDialogFragment();
+    public static CalenderDialog newInstance() {
+        return new CalenderDialog();
     }
 
     @NonNull
