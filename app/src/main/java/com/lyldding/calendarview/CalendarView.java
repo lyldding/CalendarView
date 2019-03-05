@@ -91,9 +91,10 @@ public class CalendarView extends View {
     private String mSelectDateStr;
     private boolean mIsShowSelectDate = true;
     private boolean mIsShowCurrentDate = true;
-    private boolean mIsShowBorder;
+    private boolean mIsShowBorder = true;
     private boolean mIsBtnSwitchMonthScroll = true;
     private boolean mIsEnableClickOtherMonthDate;
+    private boolean mIsContainOtherMonthDate = false;
 
     enum Type {
         /**
@@ -395,7 +396,9 @@ public class CalendarView extends View {
             mPaint.setColor(Color.WHITE);
             canvas.drawRect(dayBean.getRectF(), mPaint);
         }
-
+        if (dayBean.isEmpty()) {
+            return;
+        }
         mTextPaint.setColor(dayBean.isCurrentMonth() ? mTextColor : mOtherMonthTextColor);
         mTextPaint.setTextSize(mDayTextSize);
         if (dayBean.isCurrentMonth() &&
@@ -483,23 +486,23 @@ public class CalendarView extends View {
             default:
         }
         mDayBeans.clear();
-        mDayBeans.addAll(CalendarUtils.getInstance().getMonthDate(date[0], date[1]));
+        mDayBeans.addAll(CalendarUtils.getInstance().getMonthDate(date[0], date[1], mIsContainOtherMonthDate));
         mCurrentYear = date[0];
         mCurrentMonth = date[1];
         mTitleText = mCurrentYear + "年" + mCurrentMonth + "月";
 
         int[] dateNext = CalendarUtils.getInstance().getNextMonthOfYear(mCurrentYear, mCurrentMonth);
         mNextDayBeans.clear();
-        mNextDayBeans.addAll(CalendarUtils.getInstance().getMonthDate(dateNext[0], dateNext[1]));
+        mNextDayBeans.addAll(CalendarUtils.getInstance().getMonthDate(dateNext[0], dateNext[1], mIsContainOtherMonthDate));
 
         int[] dateLast = CalendarUtils.getInstance().getLastMonthOfYear(mCurrentYear, mCurrentMonth);
         mLastDayBeans.clear();
-        mLastDayBeans.addAll(CalendarUtils.getInstance().getMonthDate(dateLast[0], dateLast[1]));
+        mLastDayBeans.addAll(CalendarUtils.getInstance().getMonthDate(dateLast[0], dateLast[1], mIsContainOtherMonthDate));
 
         mNextDayCellsV.clear();
-        mNextDayCellsV.addAll(CalendarUtils.getInstance().getMonthDate(mCurrentYear + 1, mCurrentMonth));
+        mNextDayCellsV.addAll(CalendarUtils.getInstance().getMonthDate(mCurrentYear + 1, mCurrentMonth, mIsContainOtherMonthDate));
         mLastDayCellsV.clear();
-        mLastDayCellsV.addAll(CalendarUtils.getInstance().getMonthDate(mCurrentYear - 1, mCurrentMonth));
+        mLastDayCellsV.addAll(CalendarUtils.getInstance().getMonthDate(mCurrentYear - 1, mCurrentMonth, mIsContainOtherMonthDate));
 
         for (int index = 0; index < mDayRectFs.size(); index++) {
             mDayBeans.get(index).setRectF(mDayRectFs.get(index));
@@ -745,5 +748,9 @@ public class CalendarView extends View {
 
     public void setDayTextSize(int dayTextSize) {
         mDayTextSize = dayTextSize;
+    }
+
+    public void setContainOtherMonthDate(boolean isContainOtherMonthDate) {
+        mIsContainOtherMonthDate = isContainOtherMonthDate;
     }
 }

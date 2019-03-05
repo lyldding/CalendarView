@@ -37,11 +37,12 @@ public class CalendarUtils {
     /**
      * 获得当月显示的日期（上月 +当月 + 下月）
      *
-     * @param year  当前年份
-     * @param month 当前月份
+     * @param year                当前年份
+     * @param month               当前月份
+     * @param isContainOtherMonth true 包含其他月份
      * @return
      */
-    public List<DayBean> getMonthDate(int year, int month) {
+    public List<DayBean> getMonthDate(int year, int month, boolean isContainOtherMonth) {
         String key = year + "" + month;
         if (mCacheMap.containsKey(key)) {
             return mCacheMap.get(key);
@@ -60,14 +61,22 @@ public class CalendarUtils {
         int nextMonth = date[1];
 
         for (int i = 0; i < firstDayOfWeek; i++) {
-            dayBeans.add(createDayCell(lastYear, lastMonth, lastMonthDays - firstDayOfWeek + 1 + i, false));
+            if (isContainOtherMonth) {
+                dayBeans.add(createDayCell(lastYear, lastMonth, lastMonthDays - firstDayOfWeek + 1 + i, false));
+            } else {
+                dayBeans.add(new DayBean(true));
+            }
         }
         for (int i = 0; i < currentMonthDays; i++) {
             dayBeans.add(createDayCell(year, month, i + 1, true));
         }
 
         for (int i = 0; i < CalendarUtils.DAY_CELL_NUM - currentMonthDays - firstDayOfWeek; i++) {
-            dayBeans.add(createDayCell(nextYear, nextMonth, i + 1, false));
+            if (isContainOtherMonth) {
+                dayBeans.add(createDayCell(nextYear, nextMonth, i + 1, false));
+            } else {
+                dayBeans.add(new DayBean(true));
+            }
         }
         mCacheMap.put(key, dayBeans);
         return dayBeans;
@@ -101,7 +110,7 @@ public class CalendarUtils {
 
 
     private DayBean createDayCell(int year, int month, int day, boolean isCurrentMonth) {
-        DayBean dayBean = new DayBean();
+        DayBean dayBean = new DayBean(false);
         dayBean.setCurrentMonth(isCurrentMonth);
         dayBean.setYear(year);
         dayBean.setMonth(month);

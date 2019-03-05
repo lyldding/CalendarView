@@ -2,17 +2,32 @@ package com.lyldding.calendarview;
 
 import android.graphics.RectF;
 
+import java.io.Serializable;
+
 /**
  * @author https://github.com/lyldding/CalendarView
  * @date 2019/2/1
  */
-public class DayBean {
+public class DayBean implements Serializable {
     private RectF mRectF;
     private int mYear;
     private int mMonth;
     private int mDay;
     private int mTextColor;
     private boolean mIsCurrentMonth;
+    private boolean mIsEmpty;
+
+    DayBean(boolean isEmpty) {
+        mIsEmpty = isEmpty;
+    }
+
+    public boolean isEmpty() {
+        return mIsEmpty;
+    }
+
+    public void setEmpty(boolean empty) {
+        mIsEmpty = empty;
+    }
 
     public int getYear() {
         return mYear;
