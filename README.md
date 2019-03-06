@@ -7,6 +7,12 @@ CSDN：https://blog.csdn.net/lylddingHFFW/article/details/88227283
 
 GitHub:https://github.com/lyldding/CalendarView
 
+```
+	dependencies {
+	        implementation 'com.github.lyldding:CalendarView:1.0.0'
+	}
+```
+
 <div align=center>
 <img src="https://img-blog.csdnimg.cn/20190306101607874.gif" width="50%" height="50%" />
 </div>
