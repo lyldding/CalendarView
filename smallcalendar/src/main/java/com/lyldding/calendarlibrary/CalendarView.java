@@ -4,7 +4,6 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Rect;
 import android.graphics.RectF;
 import android.support.annotation.ColorInt;
 import android.support.annotation.Nullable;
@@ -53,12 +52,11 @@ public class CalendarView extends View {
     private RectF mLastRectF;
     private RectF mNextRectF;
     private RectF mDayContentRectF;
-    private Rect mDayTextRect;
     private List<RectF> mDayRectFs;
     private List<RectF> mNextMonthDayRectFs;
     private List<RectF> mLastMonthDayRectFs;
-    private List<RectF> mNextYearDayRectFsV;
-    private List<RectF> mLastYearDayRectFsV;
+    private List<RectF> mNextYearMonthDayRectFs;
+    private List<RectF> mLastYearMonthDayRectFs;
     private List<RectF> mWeekRectFs;
     private Context mContext;
     private String mTitleText;
@@ -66,11 +64,11 @@ public class CalendarView extends View {
     private float mTouchDownX;
     private float mTouchDownY;
 
-    private List<DayBean> mDayBeans;
-    private List<DayBean> mNextDayBeans;
-    private List<DayBean> mLastDayBeans;
-    private List<DayBean> mNextDayCellsV;
-    private List<DayBean> mLastDayCellsV;
+    private List<DayBean> mCurrentDayBeans;
+    private List<DayBean> mNextMonthDayBeans;
+    private List<DayBean> mLastMonthDayBeans;
+    private List<DayBean> mNextYearMonthDayBeans;
+    private List<DayBean> mLastYearMonthDayBeans;
     private OnClickDayListener mOnClickDayListener;
 
     private int mCurrentYear;
@@ -94,7 +92,6 @@ public class CalendarView extends View {
     private boolean mIsShowCurrentDate = true;
     private boolean mIsShowBorder = false;
     private boolean mIsBtnSwitchMonthScroll = true;
-    private boolean mIsEnableClickOtherMonthDate;
     private boolean mIsContainOtherMonthDate = true;
     private boolean mIsSundayAtFirst = true;
 
@@ -118,7 +115,6 @@ public class CalendarView extends View {
          */
         Vertical,
         Horizontal,
-        All,
         None
     }
 
@@ -140,21 +136,35 @@ public class CalendarView extends View {
 
     private void init(Context context) {
         mContext = context;
-
-        mRadius = CalendarUtils.getInstance().dip2px(context, 2.5f);
-        mStrokeWidth = CalendarUtils.getInstance().dip2px(context, 1);
-        mWeekHeight = CalendarUtils.getInstance().dip2px(context, 20);
-        mTitleHeight = CalendarUtils.getInstance().dip2px(context, 30);
-
-        mTitleTextSize = CalendarUtils.getInstance().dip2px(context, 15);
-        mWeekTextSize = CalendarUtils.getInstance().dip2px(context, 9);
-        mDayTextSize = CalendarUtils.getInstance().dip2px(context, 12);
-
+        initSize();
 
         mTouchSlop = ViewConfiguration.get(mContext).getScaledTouchSlop();
         mContentScroller = new Scroller(context);
         mVelocityTracker = VelocityTracker.obtain();
 
+        initPaint();
+        initRectF();
+
+        mInitDate = CalendarUtils.getInstance().getCurrentDate();
+        mCurrentYear = mInitDate[0];
+        mCurrentMonth = mInitDate[1];
+
+        mViewHeight = CalendarUtils.getInstance().dip2px(getContext(), 244);
+        mViewWidth = CalendarUtils.getInstance().dip2px(getContext(), 327);
+    }
+
+    private void initSize() {
+        mRadius = CalendarUtils.getInstance().dip2px(mContext, 2.5f);
+        mStrokeWidth = CalendarUtils.getInstance().dip2px(mContext, 1);
+        mWeekHeight = CalendarUtils.getInstance().dip2px(mContext, 20);
+        mTitleHeight = CalendarUtils.getInstance().dip2px(mContext, 30);
+
+        mTitleTextSize = CalendarUtils.getInstance().dip2px(mContext, 15);
+        mWeekTextSize = CalendarUtils.getInstance().dip2px(mContext, 9);
+        mDayTextSize = CalendarUtils.getInstance().dip2px(mContext, 12);
+    }
+
+    private void initPaint() {
         mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mPaint.setStrokeWidth(mStrokeWidth);
 
@@ -163,7 +173,9 @@ public class CalendarView extends View {
         mTextPaint.setStyle(Paint.Style.FILL);
         mTextPaint.setTextAlign(Paint.Align.CENTER);
 
+    }
 
+    private void initRectF() {
         mViewRectF = new RectF();
         mTitleRectF = new RectF();
         mTitleTextRectF = new RectF();
@@ -174,16 +186,16 @@ public class CalendarView extends View {
         mDayRectFs = new ArrayList<>(CalendarUtils.DAY_CELL_NUM);
         mNextMonthDayRectFs = new ArrayList<>(CalendarUtils.DAY_CELL_NUM);
         mLastMonthDayRectFs = new ArrayList<>(CalendarUtils.DAY_CELL_NUM);
-        mNextYearDayRectFsV = new ArrayList<>(CalendarUtils.DAY_CELL_NUM);
-        mLastYearDayRectFsV = new ArrayList<>(CalendarUtils.DAY_CELL_NUM);
+        mNextYearMonthDayRectFs = new ArrayList<>(CalendarUtils.DAY_CELL_NUM);
+        mLastYearMonthDayRectFs = new ArrayList<>(CalendarUtils.DAY_CELL_NUM);
 
         mWeekRectFs = new ArrayList<>(CalendarUtils.WEEK_COLUMN);
 
-        mDayBeans = new ArrayList<>(CalendarUtils.DAY_CELL_NUM);
-        mNextDayBeans = new ArrayList<>(CalendarUtils.DAY_CELL_NUM);
-        mLastDayBeans = new ArrayList<>(CalendarUtils.DAY_CELL_NUM);
-        mNextDayCellsV = new ArrayList<>(CalendarUtils.DAY_CELL_NUM);
-        mLastDayCellsV = new ArrayList<>(CalendarUtils.DAY_CELL_NUM);
+        mCurrentDayBeans = new ArrayList<>(CalendarUtils.DAY_CELL_NUM);
+        mNextMonthDayBeans = new ArrayList<>(CalendarUtils.DAY_CELL_NUM);
+        mLastMonthDayBeans = new ArrayList<>(CalendarUtils.DAY_CELL_NUM);
+        mNextYearMonthDayBeans = new ArrayList<>(CalendarUtils.DAY_CELL_NUM);
+        mLastYearMonthDayBeans = new ArrayList<>(CalendarUtils.DAY_CELL_NUM);
 
 
         for (int index = 0; index < CalendarUtils.WEEK_COLUMN; index++) {
@@ -194,19 +206,9 @@ public class CalendarView extends View {
             mNextMonthDayRectFs.add(new RectF());
             mLastMonthDayRectFs.add(new RectF());
 
-            mNextYearDayRectFsV.add(new RectF());
-            mLastYearDayRectFsV.add(new RectF());
+            mNextYearMonthDayRectFs.add(new RectF());
+            mLastYearMonthDayRectFs.add(new RectF());
         }
-
-        mInitDate = CalendarUtils.getInstance().getCurrentDate();
-        mCurrentYear = mInitDate[0];
-        mCurrentMonth = mInitDate[1];
-
-
-        mViewHeight = CalendarUtils.getInstance().dip2px(getContext(), 244);
-        mViewWidth = CalendarUtils.getInstance().dip2px(getContext(), 327);
-
-        mDayTextRect = new Rect();
     }
 
     @Override
@@ -216,29 +218,39 @@ public class CalendarView extends View {
         mViewHeight = getMeasuredHeight();
         mViewWidth = getMeasuredWidth();
         Log.d(TAG, " mViewHeight = " + mViewHeight + " mViewWidth = " + mViewWidth);
-        measure();
+        computeData();
         Log.e(TAG, "onMeasure: ok");
     }
 
-    private void measure() {
+    private void computeData() {
         mViewRectF.set(0 + mStrokeWidth / 2f, 0 + mStrokeWidth / 2f, mViewWidth - mStrokeWidth / 2f, mViewHeight - mStrokeWidth / 2f);
         mViewWidth = (int) mViewRectF.width();
         mItemWidth = mViewWidth / CalendarUtils.WEEK_COLUMN;
-        mDayContentHeight = mViewHeight - mTitleHeight - mWeekHeight;
-        mDayItemHeight = mDayContentHeight / CalendarUtils.DAY_ROWS;
+        computeTitleData();
+        computeWeekData();
+        computeDayData();
+        updateMonthData(mCurrentYear, mCurrentMonth, Type.NONE);
+    }
 
+    private void computeTitleData() {
+        //title 参数
         mTitleTextRectF.set(mViewWidth / 2 - CalendarUtils.getInstance().dip2px(mContext, 85) / 2, 0, mViewWidth / 2 + CalendarUtils.getInstance().dip2px(mContext, 85) / 2, mTitleHeight);
         mNextRectF.set(mTitleTextRectF.right, 0, mTitleTextRectF.right + CalendarUtils.getInstance().dip2px(mContext, 15), mTitleHeight);
         mLastRectF.set(mTitleTextRectF.left - CalendarUtils.getInstance().dip2px(mContext, 15), 0, mTitleTextRectF.left, mTitleHeight);
-
         mTitleRectF.set(0, 0, mViewWidth, mTitleHeight);
+    }
 
+    private void computeWeekData() {
         //week 参数
         for (int index = 0; index < CalendarUtils.WEEK_COLUMN; index++) {
             float startX = index * mItemWidth + mStrokeWidth * 0.5f;
             mWeekRectFs.get(index).set(startX, mTitleHeight, startX + mItemWidth, mTitleHeight + mWeekHeight);
         }
+    }
 
+    private void computeDayData() {
+        mDayContentHeight = mViewHeight - mTitleHeight - mWeekHeight;
+        mDayItemHeight = mDayContentHeight / CalendarUtils.DAY_ROWS;
         //day 参数
         for (int row = 0; row < CalendarUtils.DAY_ROWS; row++) {
             float startY = mTitleHeight + mWeekHeight + row * mDayItemHeight;
@@ -250,15 +262,12 @@ public class CalendarView extends View {
                 mNextMonthDayRectFs.get(index).set(rectF.left + mViewWidth, rectF.top, rectF.right + mViewWidth, rectF.bottom);
                 mLastMonthDayRectFs.get(index).set(rectF.left - mViewWidth, rectF.top, rectF.right - mViewWidth, rectF.bottom);
 
-                mNextYearDayRectFsV.get(index).set(rectF.left, rectF.top + mDayContentHeight, rectF.right, rectF.bottom + mDayContentHeight);
-                mLastYearDayRectFsV.get(index).set(rectF.left, rectF.top - mDayContentHeight, rectF.right, rectF.bottom - mDayContentHeight);
+                mNextYearMonthDayRectFs.get(index).set(rectF.left, rectF.top + mDayContentHeight, rectF.right, rectF.bottom + mDayContentHeight);
+                mLastYearMonthDayRectFs.get(index).set(rectF.left, rectF.top - mDayContentHeight, rectF.right, rectF.bottom - mDayContentHeight);
             }
         }
-
         mDayContentRectF.set(mDayRectFs.get(0).left, mDayRectFs.get(0).top,
                 mDayRectFs.get(CalendarUtils.DAY_CELL_NUM - 1).right, mDayRectFs.get(CalendarUtils.DAY_CELL_NUM - 1).bottom);
-
-        updateMonth(mCurrentYear, mCurrentMonth, Type.NONE);
     }
 
 
@@ -293,7 +302,7 @@ public class CalendarView extends View {
             mIsScrolling = false;
             mOffsetX = 0;
             mOffsetY = 0;
-            updateMonth(mCurrentYear, mCurrentMonth, mScrollToType);
+            updateMonthData(mCurrentYear, mCurrentMonth, mScrollToType);
         }
     }
 
@@ -336,7 +345,6 @@ public class CalendarView extends View {
      * 切换按钮
      */
     private void drawSwitchButton(Canvas canvas) {
-        //切换按钮
         mPaint.setColor(mTextColor);
         int y = CalendarUtils.getInstance().dip2px(mContext, 4.5f);
         int x = CalendarUtils.getInstance().dip2px(mContext, 5.5f);
@@ -356,7 +364,6 @@ public class CalendarView extends View {
      * 星期
      */
     private void drawWeek(Canvas canvas) {
-        //Week
         for (int index = 0; index < CalendarUtils.WEEK_COLUMN; index++) {
             RectF rectF = mWeekRectFs.get(index);
 
@@ -382,13 +389,12 @@ public class CalendarView extends View {
         canvas.save();
         canvas.clipRect(0, mViewHeight - mDayContentHeight, mViewWidth, mViewHeight);
         canvas.translate(mOffsetX, mOffsetY);
-        //day
         for (int index = 0; index < CalendarUtils.DAY_CELL_NUM; index++) {
-            drawDay(canvas, mDayBeans.get(index));
-            drawDay(canvas, mNextDayBeans.get(index));
-            drawDay(canvas, mLastDayBeans.get(index));
-            drawDay(canvas, mNextDayCellsV.get(index));
-            drawDay(canvas, mLastDayCellsV.get(index));
+            drawDay(canvas, mCurrentDayBeans.get(index));
+            drawDay(canvas, mNextMonthDayBeans.get(index));
+            drawDay(canvas, mLastMonthDayBeans.get(index));
+            drawDay(canvas, mNextYearMonthDayBeans.get(index));
+            drawDay(canvas, mLastYearMonthDayBeans.get(index));
         }
         canvas.restore();
     }
@@ -404,6 +410,7 @@ public class CalendarView extends View {
         }
         mTextPaint.setColor(dayBean.isCurrentMonth() ? mTextColor : mOtherMonthTextColor);
         mTextPaint.setTextSize(mDayTextSize);
+        //画选择日期和当前日期
         if (dayBean.isCurrentMonth() &&
                 ((mIsShowSelectDate && dayBean.getDateStr().equals(mSelectDateStr)) ||
                         (mIsShowCurrentDate && CalendarUtils.getInstance().isSameDay(dayBean, mInitDate)))) {
@@ -432,9 +439,7 @@ public class CalendarView extends View {
      */
     private float getTextBaseline(RectF rectF) {
         Paint.FontMetrics fontMetrics = mTextPaint.getFontMetrics();
-        float top = fontMetrics.top;
-        float bottom = fontMetrics.bottom;
-        return (rectF.centerY() - top / 2 - bottom / 2);
+        return rectF.centerY() - fontMetrics.top / 2 - fontMetrics.bottom / 2;
     }
 
     @Override
@@ -466,7 +471,7 @@ public class CalendarView extends View {
      * @param year 当前展示的年 月 日
      * @param type 类型
      */
-    private void updateMonth(int year, int month, Type type) {
+    private void updateMonthData(int year, int month, Type type) {
         int[] date = new int[]{year, month};
         switch (type) {
             case LAST:
@@ -483,37 +488,37 @@ public class CalendarView extends View {
                 break;
             default:
         }
-        mDayBeans.clear();
-        mDayBeans.addAll(CalendarUtils.getInstance().getMonthDate(date[0], date[1],
+        mCurrentDayBeans.clear();
+        mCurrentDayBeans.addAll(CalendarUtils.getInstance().getMonthDate(date[0], date[1],
                 mIsContainOtherMonthDate, mIsSundayAtFirst));
         mCurrentYear = date[0];
         mCurrentMonth = date[1];
         mTitleText = mCurrentYear + "年" + mCurrentMonth + "月";
 
         int[] dateNext = CalendarUtils.getInstance().getNextMonthOfYear(mCurrentYear, mCurrentMonth);
-        mNextDayBeans.clear();
-        mNextDayBeans.addAll(CalendarUtils.getInstance().getMonthDate(dateNext[0], dateNext[1],
+        mNextMonthDayBeans.clear();
+        mNextMonthDayBeans.addAll(CalendarUtils.getInstance().getMonthDate(dateNext[0], dateNext[1],
                 mIsContainOtherMonthDate, mIsSundayAtFirst));
 
         int[] dateLast = CalendarUtils.getInstance().getLastMonthOfYear(mCurrentYear, mCurrentMonth);
-        mLastDayBeans.clear();
-        mLastDayBeans.addAll(CalendarUtils.getInstance().getMonthDate(dateLast[0], dateLast[1],
+        mLastMonthDayBeans.clear();
+        mLastMonthDayBeans.addAll(CalendarUtils.getInstance().getMonthDate(dateLast[0], dateLast[1],
                 mIsContainOtherMonthDate, mIsSundayAtFirst));
 
-        mNextDayCellsV.clear();
-        mNextDayCellsV.addAll(CalendarUtils.getInstance().getMonthDate(mCurrentYear + 1, mCurrentMonth,
+        mNextYearMonthDayBeans.clear();
+        mNextYearMonthDayBeans.addAll(CalendarUtils.getInstance().getMonthDate(mCurrentYear + 1, mCurrentMonth,
                 mIsContainOtherMonthDate, mIsSundayAtFirst));
-        mLastDayCellsV.clear();
-        mLastDayCellsV.addAll(CalendarUtils.getInstance().getMonthDate(mCurrentYear - 1, mCurrentMonth,
+        mLastYearMonthDayBeans.clear();
+        mLastYearMonthDayBeans.addAll(CalendarUtils.getInstance().getMonthDate(mCurrentYear - 1, mCurrentMonth,
                 mIsContainOtherMonthDate, mIsSundayAtFirst));
 
         for (int index = 0; index < mDayRectFs.size(); index++) {
-            mDayBeans.get(index).setRectF(mDayRectFs.get(index));
-            mNextDayBeans.get(index).setRectF(mNextMonthDayRectFs.get(index));
-            mLastDayBeans.get(index).setRectF(mLastMonthDayRectFs.get(index));
+            mCurrentDayBeans.get(index).setRectF(mDayRectFs.get(index));
+            mNextMonthDayBeans.get(index).setRectF(mNextMonthDayRectFs.get(index));
+            mLastMonthDayBeans.get(index).setRectF(mLastMonthDayRectFs.get(index));
 
-            mNextDayCellsV.get(index).setRectF(mNextYearDayRectFsV.get(index));
-            mLastDayCellsV.get(index).setRectF(mLastYearDayRectFsV.get(index));
+            mNextYearMonthDayBeans.get(index).setRectF(mNextYearMonthDayRectFs.get(index));
+            mLastYearMonthDayBeans.get(index).setRectF(mLastYearMonthDayRectFs.get(index));
         }
         Log.d(TAG, "updateMonth: mTitleText = " + mTitleText);
     }
@@ -569,19 +574,19 @@ public class CalendarView extends View {
                 if (mIsBtnSwitchMonthScroll) {
                     startScrollOnClick(Type.NEXT);
                 } else {
-                    updateMonth(mCurrentYear, mCurrentMonth, Type.NEXT);
+                    updateMonthData(mCurrentYear, mCurrentMonth, Type.NEXT);
                     ViewCompat.postInvalidateOnAnimation(this);
                 }
             } else if (isActionDownInsideRectF(mLastRectF)) {
                 if (mIsBtnSwitchMonthScroll) {
                     startScrollOnClick(Type.LAST);
                 } else {
-                    updateMonth(mCurrentYear, mCurrentMonth, Type.LAST);
+                    updateMonthData(mCurrentYear, mCurrentMonth, Type.LAST);
                     ViewCompat.postInvalidateOnAnimation(this);
                 }
             } else if (isActionDownInsideRectF(mDayContentRectF)) {
                 if (mOnClickDayListener != null) {
-                    for (DayBean dayBean : mDayBeans) {
+                    for (DayBean dayBean : mCurrentDayBeans) {
                         if (dayBean.isCurrentMonth() && dayBean.isContains(mTouchDownX, mTouchDownY)) {
                             mSelectDateStr = dayBean.getDateStr();
                             mOnClickDayListener.onClickDay(dayBean.getYear(), dayBean.getMonth(), dayBean.getDay());
@@ -756,7 +761,7 @@ public class CalendarView extends View {
     public void containOtherMonthDate(boolean isContainOtherMonthDate) {
         mIsContainOtherMonthDate = isContainOtherMonthDate;
         CalendarUtils.getInstance().clearCacheMonth();
-        updateMonth(mCurrentYear, mCurrentMonth, Type.NONE);
+        updateMonthData(mCurrentYear, mCurrentMonth, Type.NONE);
     }
 
     /**
@@ -765,7 +770,7 @@ public class CalendarView extends View {
     public void sundayAtFirst(boolean isSundayAtFirst) {
         mIsSundayAtFirst = isSundayAtFirst;
         CalendarUtils.getInstance().clearCacheMonth();
-        updateMonth(mCurrentYear, mCurrentMonth, Type.NONE);
+        updateMonthData(mCurrentYear, mCurrentMonth, Type.NONE);
     }
 
     public void setBorderColor(@ColorInt int borderColor) {

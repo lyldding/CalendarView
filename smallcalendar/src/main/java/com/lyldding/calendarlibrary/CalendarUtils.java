@@ -23,10 +23,10 @@ public class CalendarUtils {
     /**
      * 缓存每月天数信息
      */
-    private HashMap<String, List<DayBean>> mCacheMap;
+    private HashMap<String, List<DayBean>> mCacheMonthData;
 
     private CalendarUtils() {
-        mCacheMap = new HashMap<>();
+        mCacheMonthData = new HashMap<>();
     }
 
     public static CalendarUtils getInstance() {
@@ -37,8 +37,8 @@ public class CalendarUtils {
         private final static CalendarUtils INSTANCE = new CalendarUtils();
     }
 
-    public void clearCacheMonth(){
-        mCacheMap = new HashMap<>();
+    public void clearCacheMonth() {
+        mCacheMonthData = new HashMap<>();
     }
 
     /**
@@ -51,11 +51,11 @@ public class CalendarUtils {
      */
     public List<DayBean> getMonthDate(int year, int month, boolean isContainOtherMonth, boolean isSundayAtFirst) {
         String key = year + "" + month;
-        if (mCacheMap.containsKey(key)) {
-            return mCacheMap.get(key);
+        if (mCacheMonthData.containsKey(key)) {
+            return mCacheMonthData.get(key);
         }
         List<DayBean> dayBeans = new ArrayList<>();
-        int firstDayOfWeek = getFirstDayOfMonthInWeek(year, month - 1, isSundayAtFirst);
+        int needLastMonthDays = getLastMonthDaysAtFristWeek(year, month - 1, isSundayAtFirst);
 
         int[] date = getLastMonthOfYear(year, month);
         int lastYear = date[0];
@@ -67,25 +67,25 @@ public class CalendarUtils {
         int nextYear = date[0];
         int nextMonth = date[1];
 
-        for (int i = 0; i < firstDayOfWeek; i++) {
+        for (int i = 0; i < needLastMonthDays; i++) {
             if (isContainOtherMonth) {
-                dayBeans.add(createDayCell(lastYear, lastMonth, lastMonthDays - firstDayOfWeek + 1 + i, false));
+                dayBeans.add(createDayBean(lastYear, lastMonth, lastMonthDays - needLastMonthDays + 1 + i, false));
             } else {
                 dayBeans.add(new DayBean(true));
             }
         }
         for (int i = 0; i < currentMonthDays; i++) {
-            dayBeans.add(createDayCell(year, month, i + 1, true));
+            dayBeans.add(createDayBean(year, month, i + 1, true));
         }
 
-        for (int i = 0; i < CalendarUtils.DAY_CELL_NUM - currentMonthDays - firstDayOfWeek; i++) {
+        for (int i = 0; i < CalendarUtils.DAY_CELL_NUM - currentMonthDays - needLastMonthDays; i++) {
             if (isContainOtherMonth) {
-                dayBeans.add(createDayCell(nextYear, nextMonth, i + 1, false));
+                dayBeans.add(createDayBean(nextYear, nextMonth, i + 1, false));
             } else {
                 dayBeans.add(new DayBean(true));
             }
         }
-        mCacheMap.put(key, dayBeans);
+        mCacheMonthData.put(key, dayBeans);
         return dayBeans;
     }
 
@@ -116,7 +116,7 @@ public class CalendarUtils {
     }
 
 
-    private DayBean createDayCell(int year, int month, int day, boolean isCurrentMonth) {
+    private DayBean createDayBean(int year, int month, int day, boolean isCurrentMonth) {
         DayBean dayBean = new DayBean(false);
         dayBean.setCurrentMonth(isCurrentMonth);
         dayBean.setYear(year);
@@ -180,9 +180,9 @@ public class CalendarUtils {
 
 
     /**
-     * 计算当月1号是周几
+     * 通过当月1号是周几，来确定需要显示上月的日期
      */
-    private int getFirstDayOfMonthInWeek(int year, int month, boolean isSundayAtFirst) {
+    private int getLastMonthDaysAtFristWeek(int year, int month, boolean isSundayAtFirst) {
         Calendar calendar = Calendar.getInstance();
         calendar.set(year, month, 1);
         Log.d(TAG, "getFirstDayOfMonthInWeek: " + calendar.get(Calendar.DAY_OF_WEEK));
