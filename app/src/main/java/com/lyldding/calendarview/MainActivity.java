@@ -2,11 +2,12 @@ package com.lyldding.calendarview;
 
 import android.graphics.Color;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Toast;
 
 import com.lyldding.calendarlibrary.CalendarView;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity implements CalendarView.OnClickDayListener {
 
