@@ -15,7 +15,6 @@ import android.widget.Scroller;
 import java.util.ArrayList;
 import java.util.List;
 
-import androidx.annotation.ColorInt;
 import androidx.annotation.Nullable;
 import androidx.core.view.ViewCompat;
 
@@ -28,10 +27,6 @@ public class CalendarView extends View {
     private int mTitleTextSize;
     private int mWeekTextSize;
     private int mDayTextSize;
-
-    private int mWeekBackgroundColor = 0xff88baff;
-    private int mBackground = Color.WHITE;
-
 
     private int mRadius;
     private int mStrokeWidth;
@@ -164,6 +159,7 @@ public class CalendarView extends View {
                 .withCurrentMonthDayTextColor(Color.BLACK)
                 .withIsSundayAtFirst(true)
                 .withIsBtnSwitchMonthScroll(true)
+                .withWeekBackgroundColor(0xff88baff)
                 .build();
     }
 
@@ -347,7 +343,7 @@ public class CalendarView extends View {
      */
     private void drawBackground(Canvas canvas) {
         mPaint.setStyle(Paint.Style.FILL);
-        mPaint.setColor(mBackground);
+        mPaint.setColor(mConfig.getBackground());
         canvas.drawRoundRect(mViewRectF, mRadius, mRadius, mPaint);
     }
 
@@ -392,7 +388,7 @@ public class CalendarView extends View {
             RectF rectF = mWeekRectFs.get(index);
 
             mPaint.setStyle(Paint.Style.FILL);
-            mPaint.setColor(mWeekBackgroundColor);
+            mPaint.setColor(mConfig.getWeekBackgroundColor());
             canvas.drawRect(rectF, mPaint);
             if (mConfig.isShowBorder()) {
                 mPaint.setStyle(Paint.Style.STROKE);
@@ -711,21 +707,5 @@ public class CalendarView extends View {
 
     public void setOnClickDayListener(OnClickDayListener onClickDayListener) {
         mOnClickDayListener = onClickDayListener;
-    }
-
-    public void setBackground(@ColorInt int background) {
-        mBackground = background;
-        ViewCompat.postInvalidateOnAnimation(this);
-    }
-
-
-    /**
-     * 星期背景色
-     *
-     * @param weekBackgroundColor
-     */
-    public void setWeekBackgroundColor(@ColorInt int weekBackgroundColor) {
-        mWeekBackgroundColor = weekBackgroundColor;
-        ViewCompat.postInvalidateOnAnimation(this);
     }
 }

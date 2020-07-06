@@ -24,10 +24,11 @@ public class MainActivity extends AppCompatActivity implements CalendarView.OnCl
         findViewById(R.id.bt).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mCalendarView.setBackground(Color.WHITE);
+
                 mCalendarView.setConfig(CalendarConfig.Builder.newBuilder().withIsShowBorder(false)
                         .withIsBtnSwitchMonthScroll(true)
                         .withIsSundayAtFirst(true)
+                        .withBackground(Color.WHITE)
                         .withIsContainOtherMonthDate(true).build());
             }
         });
@@ -49,7 +50,7 @@ public class MainActivity extends AppCompatActivity implements CalendarView.OnCl
         findViewById(R.id.bt3).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mCalendarView.setBackground(Color.GREEN);
+                mCalendarView.setConfig(CalendarConfig.Builder.newBuilder().withBackground(Color.GREEN).build());
             }
         });
 
