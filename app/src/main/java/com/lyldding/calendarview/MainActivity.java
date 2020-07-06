@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Toast;
 
+import com.lyldding.calendarlibrary.CalendarConfig;
 import com.lyldding.calendarlibrary.CalendarView;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -23,26 +24,25 @@ public class MainActivity extends AppCompatActivity implements CalendarView.OnCl
         findViewById(R.id.bt).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mCalendarView.showBorder(false);
-                mCalendarView.btnSwitchMonthScroll(true);
                 mCalendarView.setBackground(Color.WHITE);
-                mCalendarView.sundayAtFirst(true);
-                mCalendarView.containOtherMonthDate(true);
-                mCalendarView.postInvalidate();
+                mCalendarView.setConfig(CalendarConfig.Builder.newBuilder().withIsShowBorder(false)
+                        .withIsBtnSwitchMonthScroll(true)
+                        .withIsSundayAtFirst(true)
+                        .withIsContainOtherMonthDate(true).build());
             }
         });
 
         findViewById(R.id.bt1).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mCalendarView.showBorder(true);
+                mCalendarView.setConfig(CalendarConfig.Builder.newBuilder().withIsShowBorder(true).build());
             }
         });
 
         findViewById(R.id.bt2).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mCalendarView.btnSwitchMonthScroll(false);
+                mCalendarView.setConfig(CalendarConfig.Builder.newBuilder().withIsBtnSwitchMonthScroll(false).build());
             }
         });
 
@@ -52,16 +52,18 @@ public class MainActivity extends AppCompatActivity implements CalendarView.OnCl
                 mCalendarView.setBackground(Color.GREEN);
             }
         });
+
         findViewById(R.id.bt4).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mCalendarView.sundayAtFirst(false);
+                mCalendarView.setConfig(CalendarConfig.Builder.newBuilder().withIsSundayAtFirst(false).build());
             }
         });
+
         findViewById(R.id.bt5).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mCalendarView.containOtherMonthDate(false);
+                mCalendarView.setConfig(CalendarConfig.Builder.newBuilder().withIsContainOtherMonthDate(false).build());
             }
         });
 

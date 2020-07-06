@@ -10,7 +10,6 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
 import android.view.View;
-import android.view.ViewConfiguration;
 import android.widget.Scroller;
 
 import java.util.ArrayList;
@@ -29,13 +28,11 @@ public class CalendarView extends View {
     private int mTitleTextSize;
     private int mWeekTextSize;
     private int mDayTextSize;
-    private int mTextColor = Color.BLACK;
-    private int mOtherMonthTextColor = Color.LTGRAY;
+
     private int mWeekBackgroundColor = 0xff88baff;
     private int mBackground = Color.WHITE;
-    private int mSelectBackgroundColor = 0xff1157cb;
-    private int mSelectTextColor = Color.RED;
-    private int mBorderColor = Color.GRAY;
+
+
     private int mRadius;
     private int mStrokeWidth;
     private float mItemWidth;
@@ -77,6 +74,7 @@ public class CalendarView extends View {
     private int[] mInitDate;
 
     private boolean mIsClick;
+    private boolean mIsMoved = false;
     private boolean mIsDrawing;
     private boolean mIsScrolling;
     private int mTouchSlop;
@@ -89,12 +87,7 @@ public class CalendarView extends View {
 
     private ScrollOrientation mScrollOrientation = ScrollOrientation.None;
     private String mSelectDateStr;
-    private boolean mIsShowSelectDate = true;
-    private boolean mIsShowCurrentDate = true;
-    private boolean mIsShowBorder = false;
-    private boolean mIsBtnSwitchMonthScroll = true;
-    private boolean mIsContainOtherMonthDate = true;
-    private boolean mIsSundayAtFirst = true;
+    private CalendarConfig mConfig;
 
     enum Type {
         /**
@@ -137,9 +130,12 @@ public class CalendarView extends View {
 
     private void init(Context context) {
         mContext = context;
+        if (mConfig == null) {
+            mConfig = createDefaultConfig();
+        }
         initSize();
 
-        mTouchSlop = ViewConfiguration.get(mContext).getScaledTouchSlop();
+        mTouchSlop = CalendarUtils.getInstance().dip2px(mContext, 1);
         mContentScroller = new Scroller(context);
         mVelocityTracker = VelocityTracker.obtain();
 
@@ -154,15 +150,42 @@ public class CalendarView extends View {
         mViewWidth = CalendarUtils.getInstance().dip2px(getContext(), 327);
     }
 
+    private CalendarConfig createDefaultConfig() {
+        return CalendarConfig.Builder.newBuilder()
+                .withIsShowSelectDate(true)
+                .withSelectTextColor(Color.RED)
+                .withSelectBackgroundColor(0xff1157cb)
+                .withCurrentTextColor(Color.RED)
+                .withCurrentBackgroundColor(0xff1157cb)
+                .withIsShowBorder(false)
+                .withBorderColor(Color.GRAY)
+                .withIsContainOtherMonthDate(true)
+                .withOtherMonthTextColor(Color.LTGRAY)
+                .withCurrentMonthDayTextColor(Color.BLACK)
+                .withIsSundayAtFirst(true)
+                .withIsBtnSwitchMonthScroll(true)
+                .build();
+    }
+
+    public void setConfig(CalendarConfig config) {
+        if (config != null) {
+            mConfig = config;
+            initSize();
+            CalendarUtils.getInstance().clearCacheMonth();
+            updateMonthData(mCurrentYear, mCurrentMonth, Type.NONE);
+            ViewCompat.postInvalidateOnAnimation(this);
+        }
+    }
+
     private void initSize() {
-        mRadius = CalendarUtils.getInstance().dip2px(mContext, 2.5f);
+        mRadius = CalendarUtils.getInstance().dip2px(mContext, mConfig.getBackgroundRadius());
         mStrokeWidth = CalendarUtils.getInstance().dip2px(mContext, 1);
         mWeekHeight = CalendarUtils.getInstance().dip2px(mContext, 20);
         mTitleHeight = CalendarUtils.getInstance().dip2px(mContext, 30);
 
-        mTitleTextSize = CalendarUtils.getInstance().dip2px(mContext, 15);
-        mWeekTextSize = CalendarUtils.getInstance().dip2px(mContext, 9);
-        mDayTextSize = CalendarUtils.getInstance().dip2px(mContext, 12);
+        mTitleTextSize = CalendarUtils.getInstance().dip2px(mContext, mConfig.getTitleTextSize());
+        mWeekTextSize = CalendarUtils.getInstance().dip2px(mContext, mConfig.getWeekTextSize());
+        mDayTextSize = CalendarUtils.getInstance().dip2px(mContext, mConfig.getDayTextSize());
     }
 
     private void initPaint() {
@@ -170,7 +193,7 @@ public class CalendarView extends View {
         mPaint.setStrokeWidth(mStrokeWidth);
 
         mTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        mTextPaint.setColor(mTextColor);
+        mTextPaint.setColor(mConfig.getCurrentMonthDayTextColor());
         mTextPaint.setStyle(Paint.Style.FILL);
         mTextPaint.setTextAlign(Paint.Align.CENTER);
 
@@ -235,7 +258,7 @@ public class CalendarView extends View {
 
     private void computeTitleData() {
         //title 参数
-        mTitleTextRectF.set(mViewWidth / 2 - CalendarUtils.getInstance().dip2px(mContext, 85) / 2, 0, mViewWidth / 2 + CalendarUtils.getInstance().dip2px(mContext, 85) / 2, mTitleHeight);
+        mTitleTextRectF.set(mViewWidth / 2 - CalendarUtils.getInstance().dip2px(mContext, 85) / 2f, 0, mViewWidth / 2 + CalendarUtils.getInstance().dip2px(mContext, 85) / 2f, mTitleHeight);
         mNextRectF.set(mTitleTextRectF.right, 0, mTitleTextRectF.right + CalendarUtils.getInstance().dip2px(mContext, 15), mTitleHeight);
         mLastRectF.set(mTitleTextRectF.left - CalendarUtils.getInstance().dip2px(mContext, 15), 0, mTitleTextRectF.left, mTitleHeight);
         mTitleRectF.set(0, 0, mViewWidth, mTitleHeight);
@@ -332,12 +355,12 @@ public class CalendarView extends View {
      * 年月
      */
     private void drawDataStr(Canvas canvas) {
-        if (mIsShowBorder) {
+        if (mConfig.isShowBorder()) {
             mPaint.setStyle(Paint.Style.STROKE);
             mPaint.setColor(Color.WHITE);
             canvas.drawRect(mTitleRectF, mPaint);
         }
-        mTextPaint.setColor(mTextColor);
+        mTextPaint.setColor(mConfig.getCurrentMonthDayTextColor());
         mTextPaint.setTextSize(mTitleTextSize);
         canvas.drawText(mTitleText, mTitleTextRectF.centerX(), getTextBaseline(mTitleTextRectF), mTextPaint);
     }
@@ -346,7 +369,7 @@ public class CalendarView extends View {
      * 切换按钮
      */
     private void drawSwitchButton(Canvas canvas) {
-        mPaint.setColor(mTextColor);
+        mPaint.setColor(mConfig.getCurrentMonthDayTextColor());
         int y = CalendarUtils.getInstance().dip2px(mContext, 4.5f);
         int x = CalendarUtils.getInstance().dip2px(mContext, 5.5f);
         canvas.drawLine(mLastRectF.centerX() - mLastRectF.width() / 4,
@@ -371,13 +394,13 @@ public class CalendarView extends View {
             mPaint.setStyle(Paint.Style.FILL);
             mPaint.setColor(mWeekBackgroundColor);
             canvas.drawRect(rectF, mPaint);
-            if (mIsShowBorder) {
+            if (mConfig.isShowBorder()) {
                 mPaint.setStyle(Paint.Style.STROKE);
-                mPaint.setColor(mBorderColor);
+                mPaint.setColor(mConfig.getBorderColor());
                 canvas.drawRect(rectF, mPaint);
             }
             mTextPaint.setTextSize(mWeekTextSize);
-            canvas.drawText(mIsSundayAtFirst ? CalendarUtils.WEEKS.get(index) : CalendarUtils.WEEKS_1.get(index),
+            canvas.drawText(mConfig.isSundayAtFirst() ? CalendarUtils.WEEKS.get(index) : CalendarUtils.WEEKS_1.get(index),
                     rectF.centerX(), getTextBaseline(rectF), mTextPaint);
 
         }
@@ -401,23 +424,23 @@ public class CalendarView extends View {
     }
 
     private void drawDay(Canvas canvas, DayBean dayBean) {
-        if (mIsShowBorder) {
+        if (mConfig.isShowBorder()) {
             mPaint.setStyle(Paint.Style.STROKE);
-            mPaint.setColor(mBorderColor);
+            mPaint.setColor(mConfig.getBorderColor());
             canvas.drawRect(dayBean.getRectF(), mPaint);
         }
         if (dayBean.isEmpty()) {
             return;
         }
-        mTextPaint.setColor(dayBean.isCurrentMonth() ? mTextColor : mOtherMonthTextColor);
+        mTextPaint.setColor(dayBean.isCurrentMonth() ? mConfig.getCurrentMonthDayTextColor() : mConfig.getOtherMonthTextColor());
         mTextPaint.setTextSize(mDayTextSize);
         //画选择日期和当前日期
         if (dayBean.isCurrentMonth() &&
-                ((mIsShowSelectDate && dayBean.getDateStr().equals(mSelectDateStr)) ||
-                        (mIsShowCurrentDate && CalendarUtils.getInstance().isSameDay(dayBean, mInitDate)))) {
-            mTextPaint.setColor(mSelectTextColor);
+                ((mConfig.isShowSelectDate() && dayBean.getDateStr().equals(mSelectDateStr)) ||
+                        (mConfig.isShowCurrentDate() && CalendarUtils.getInstance().isSameDay(dayBean, mInitDate)))) {
+            mTextPaint.setColor(mConfig.getSelectTextColor());
             mPaint.setStyle(Paint.Style.FILL);
-            mPaint.setColor(mSelectBackgroundColor);
+            mPaint.setColor(mConfig.getSelectBackgroundColor());
             canvas.drawCircle(dayBean.getRectF().centerX(), dayBean.getRectF().centerY(),
                     Math.min(dayBean.getRectF().width(), dayBean.getRectF().height()) / 3f, mPaint);
         }
@@ -428,9 +451,9 @@ public class CalendarView extends View {
      * 外围线
      */
     private void drawOuterLine(Canvas canvas) {
-        if (mIsShowBorder) {
+        if (mConfig.isShowBorder()) {
             mPaint.setStyle(Paint.Style.STROKE);
-            mPaint.setColor(mBorderColor);
+            mPaint.setColor(mConfig.getBorderColor());
             canvas.drawRoundRect(mViewRectF, mRadius, mRadius, mPaint);
         }
     }
@@ -491,7 +514,7 @@ public class CalendarView extends View {
         }
         mCurrentDayBeans.clear();
         mCurrentDayBeans.addAll(CalendarUtils.getInstance().getMonthDate(date[0], date[1],
-                mIsContainOtherMonthDate, mIsSundayAtFirst));
+                mConfig.isContainOtherMonthDate(), mConfig.isSundayAtFirst()));
         mCurrentYear = date[0];
         mCurrentMonth = date[1];
         mTitleText = mCurrentYear + "年" + mCurrentMonth + "月";
@@ -499,19 +522,19 @@ public class CalendarView extends View {
         int[] dateNext = CalendarUtils.getInstance().getNextMonthOfYear(mCurrentYear, mCurrentMonth);
         mNextMonthDayBeans.clear();
         mNextMonthDayBeans.addAll(CalendarUtils.getInstance().getMonthDate(dateNext[0], dateNext[1],
-                mIsContainOtherMonthDate, mIsSundayAtFirst));
+                mConfig.isContainOtherMonthDate(), mConfig.isSundayAtFirst()));
 
         int[] dateLast = CalendarUtils.getInstance().getLastMonthOfYear(mCurrentYear, mCurrentMonth);
         mLastMonthDayBeans.clear();
         mLastMonthDayBeans.addAll(CalendarUtils.getInstance().getMonthDate(dateLast[0], dateLast[1],
-                mIsContainOtherMonthDate, mIsSundayAtFirst));
+                mConfig.isContainOtherMonthDate(), mConfig.isSundayAtFirst()));
 
         mNextYearMonthDayBeans.clear();
         mNextYearMonthDayBeans.addAll(CalendarUtils.getInstance().getMonthDate(mCurrentYear + 1, mCurrentMonth,
-                mIsContainOtherMonthDate, mIsSundayAtFirst));
+                mConfig.isContainOtherMonthDate(), mConfig.isSundayAtFirst()));
         mLastYearMonthDayBeans.clear();
         mLastYearMonthDayBeans.addAll(CalendarUtils.getInstance().getMonthDate(mCurrentYear - 1, mCurrentMonth,
-                mIsContainOtherMonthDate, mIsSundayAtFirst));
+                mConfig.isContainOtherMonthDate(), mConfig.isSundayAtFirst()));
 
         for (int index = 0; index < mDayRectFs.size(); index++) {
             mCurrentDayBeans.get(index).setRectF(mDayRectFs.get(index));
@@ -528,6 +551,7 @@ public class CalendarView extends View {
         mTouchDownX = event.getX();
         mTouchDownY = event.getY();
         mIsClick = true;
+        mIsMoved = false;
     }
 
     private void handleMove(MotionEvent event) {
@@ -543,6 +567,10 @@ public class CalendarView extends View {
 
         if (Math.abs(mOffsetX) > mTouchSlop || Math.abs(mOffsetY) > mTouchSlop) {
             mIsClick = false;
+            mIsMoved = true;
+            Log.d(TAG, "handleMove: 111111 = ");
+        } else {
+            Log.d(TAG, "handleMove: 2222 = ");
         }
         if (mIsScrolling ||
                 !mDayContentRectF.contains(mTouchDownX, mTouchDownY)) {
@@ -572,25 +600,30 @@ public class CalendarView extends View {
             mOffsetX = 0;
             mOffsetY = 0;
             if (isActionDownInsideRectF(mNextRectF)) {
-                if (mIsBtnSwitchMonthScroll) {
+                if (mConfig.isBtnSwitchMonthScroll()) {
                     startScrollOnClick(Type.NEXT);
                 } else {
                     updateMonthData(mCurrentYear, mCurrentMonth, Type.NEXT);
                     ViewCompat.postInvalidateOnAnimation(this);
                 }
             } else if (isActionDownInsideRectF(mLastRectF)) {
-                if (mIsBtnSwitchMonthScroll) {
+                if (mConfig.isBtnSwitchMonthScroll()) {
                     startScrollOnClick(Type.LAST);
                 } else {
                     updateMonthData(mCurrentYear, mCurrentMonth, Type.LAST);
                     ViewCompat.postInvalidateOnAnimation(this);
                 }
-            } else if (isActionDownInsideRectF(mDayContentRectF)) {
+            } else if (!mIsMoved && isActionDownInsideRectF(mDayContentRectF)) {
                 if (mOnClickDayListener != null) {
                     for (DayBean dayBean : mCurrentDayBeans) {
                         if (dayBean.isCurrentMonth() && dayBean.isContains(mTouchDownX, mTouchDownY)) {
-                            mSelectDateStr = dayBean.getDateStr();
-                            mOnClickDayListener.onClickDay(dayBean.getYear(), dayBean.getMonth(), dayBean.getDay());
+                            //双击清空选中状态
+                            if (dayBean.getDateStr().equals(mSelectDateStr)) {
+                                mSelectDateStr = "";
+                            } else {
+                                mSelectDateStr = dayBean.getDateStr();
+                                mOnClickDayListener.onClickDay(dayBean.getYear(), dayBean.getMonth(), dayBean.getDay());
+                            }
                             ViewCompat.postInvalidateOnAnimation(this);
                             break;
                         }
@@ -601,6 +634,7 @@ public class CalendarView extends View {
             startScroll(event);
         }
         mIsClick = false;
+        mIsMoved = false;
         mScrollOrientation = ScrollOrientation.None;
     }
 
@@ -681,48 +715,9 @@ public class CalendarView extends View {
 
     public void setBackground(@ColorInt int background) {
         mBackground = background;
+        ViewCompat.postInvalidateOnAnimation(this);
     }
 
-    /**
-     * 文字颜色
-     *
-     * @param textColor
-     */
-    public void setTextColor(@ColorInt int textColor) {
-        mTextColor = textColor;
-    }
-
-    /**
-     * 选中日期背景色
-     *
-     * @param selectBackgroundColor
-     */
-    public void setSelectBackgroundColor(@ColorInt int selectBackgroundColor) {
-        mSelectBackgroundColor = selectBackgroundColor;
-    }
-
-    /**
-     * 选中日期字体颜色
-     *
-     * @param selectTextColor
-     */
-    public void setSelectTextColor(@ColorInt int selectTextColor) {
-        mSelectTextColor = selectTextColor;
-    }
-
-    /**
-     * @param show true 显示当前日期
-     */
-    public void showCurrentDate(boolean show) {
-        mIsShowCurrentDate = show;
-    }
-
-    /**
-     * @param show true 显示选中日期日期
-     */
-    public void showSelectedDate(boolean show) {
-        mIsShowSelectDate = show;
-    }
 
     /**
      * 星期背景色
@@ -731,50 +726,6 @@ public class CalendarView extends View {
      */
     public void setWeekBackgroundColor(@ColorInt int weekBackgroundColor) {
         mWeekBackgroundColor = weekBackgroundColor;
-    }
-
-    /**
-     * @param isShow true 显示边框
-     */
-    public void showBorder(boolean isShow) {
-        mIsShowBorder = isShow;
-    }
-
-    /**
-     * @param isScroll true 切换上下月 按钮时滑动
-     */
-    public void btnSwitchMonthScroll(boolean isScroll) {
-        mIsBtnSwitchMonthScroll = isScroll;
-    }
-
-    public void setTitleTextSize(int titleTextSize) {
-        mTitleTextSize = titleTextSize;
-    }
-
-    public void setWeekTextSize(int weekTextSize) {
-        mWeekTextSize = weekTextSize;
-    }
-
-    public void setDayTextSize(int dayTextSize) {
-        mDayTextSize = dayTextSize;
-    }
-
-    public void containOtherMonthDate(boolean isContainOtherMonthDate) {
-        mIsContainOtherMonthDate = isContainOtherMonthDate;
-        CalendarUtils.getInstance().clearCacheMonth();
-        updateMonthData(mCurrentYear, mCurrentMonth, Type.NONE);
-    }
-
-    /**
-     * @param isSundayAtFirst true 周日为第一天，false 周一为第一天
-     */
-    public void sundayAtFirst(boolean isSundayAtFirst) {
-        mIsSundayAtFirst = isSundayAtFirst;
-        CalendarUtils.getInstance().clearCacheMonth();
-        updateMonthData(mCurrentYear, mCurrentMonth, Type.NONE);
-    }
-
-    public void setBorderColor(@ColorInt int borderColor) {
-        mBorderColor = borderColor;
+        ViewCompat.postInvalidateOnAnimation(this);
     }
 }
