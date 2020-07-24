@@ -1,7 +1,7 @@
 # CalendarView
 自定义Android日历，只有一个CalendarView，非常小巧。核心代码400行左右，主要就是画。
 
-功能：支持左右滑动切换月份，上下滑动切换年份，设置背景，边框，周末或周一为第一天，显示其他月份日期等功能。  具体参考Api或者自定义。
+功能：支持左右滑动切换月份，上下滑动切换年份，设置背景，边框，周末或周一为第一天，显示其他月份日期等功能。  具体参考CalendarConfig或者自定义。
 
 CSDN：https://blog.csdn.net/lylddingHFFW/article/details/88227283
 
@@ -9,7 +9,7 @@ GitHub:https://github.com/lyldding/CalendarView
 
 ```
 	dependencies {
-	        implementation 'com.github.lyldding:CalendarView:1.0.0'
+	        implementation 'com.github.lyldding:CalendarView:TAG'
 	}
 ```
 
